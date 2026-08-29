@@ -1,0 +1,147 @@
+rules_version = '2';
+
+// =====================================================================
+//  Reglas de seguridad de Oasis Seguimiento.
+//
+//  CÓMO ENTRA LA GENTE A ESTA APP
+//  Los líderes no tienen cuenta propia: entran con la contraseña de la
+//  iglesia y escogen su nombre de una lista. Eso es a propósito, porque
+//  pedirle a cada líder que cree una cuenta es el paso donde la mitad
+//  del equipo se queda por fuera.
+//
+//  QUÉ PROTEGEN ESTAS REGLAS, ENTONCES
+//  Protegen la base de datos del internet abierto: sin la sesión anónima
+//  que abre la app, nadie puede leer ni escribir nada, ni sabiendo la
+//  dirección del proyecto. También impiden borrar historial y falsificar
+//  mensajes.
+//
+//  QUÉ NO PROTEGEN
+//  No separan a un líder de otro, porque desde el punto de vista de
+//  Firebase todos son la misma sesión anónima. Dentro de la iglesia
+//  todos los líderes pueden ver a todas las personas. Si algún día
+//  necesitas que cada líder vea solo las suyas, hay que darle a cada uno
+//  su propia cuenta; avísame y cambiamos las reglas y la entrada.
+//
+//  LO QUE SÍ TIENES QUE HACER
+//  1. Firebase > Authentication > Métodos de acceso > activar "Anónimo".
+//  2. Firebase > Firestore > Reglas > pegar esto > Publicar.
+//  3. Cambiar las dos contraseñas desde el panel privado del Apóstol
+//     antes de meter datos de personas reales.
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------- ayudas ----------------
+
+    // La app abre una sesión anónima al cargar. Sin eso, nada.
+    function conSesion() {
+      return request.auth != null;
+    }
+
+    function camposTocados() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function soloEstosCampos(permitidos) {
+      return camposTocados().hasOnly(permitidos);
+    }
+
+    // ---------------- configuración: las contraseñas ----------------
+    //
+    // Este documento guarda las dos claves. Se puede leer porque la app
+    // necesita compararlas al entrar, y por eso NO deben ser claves que
+    // uses en ningún otro lado: son la llave de esta app y de nada más.
+
+    match /configuracion/acceso {
+      allow read: if conSesion();
+      allow write: if conSesion();
+    }
+
+    // ---------------- usuarios: líderes y Apóstol ----------------
+
+    match /usuarios/{uid} {
+      allow read: if conSesion();
+      allow create, update, delete: if conSesion();
+    }
+
+    // ---------------- personas ----------------
+
+    match /personas/{id} {
+      allow read: if conSesion();
+
+      // Registrar exige consentimiento y un teléfono con forma válida.
+      // Sin autorización de la persona no entra a la base de datos, ni
+      // desde la app ni desde ningún otro lado.
+      allow create: if conSesion()
+                    && request.resource.data.consentimiento.otorgado == true
+                    && request.resource.data.telefonoE164 is string
+                    && request.resource.data.telefonoE164.size() >= 10
+                    && request.resource.data.telefonoE164.size() <= 15
+                    && request.resource.data.telefonoE164.matches('^[0-9]+$');
+
+      // Se puede acompañar a la persona, pero no reescribir su
+      // autorización ni su teléfono: son el respaldo legal de la iglesia.
+      allow update: if conSesion()
+                    && soloEstosCampos([
+                         'etapa', 'banderas', 'notas', 'ultimoContacto',
+                         'motivoOracion', 'liderAsignadoId', 'liderAsignadoNombre',
+                         'ventanaAbiertaHasta', 'sinRespuestaConsecutivos', 'pasosEnviados'
+                       ]);
+
+      // Las personas no se borran desde la app. Si alguien pide que
+      // eliminen sus datos, se hace desde la consola de Firebase con
+      // constancia de la solicitud.
+      allow delete: if false;
+    }
+
+    // ---------------- tareas ----------------
+
+    match /tareas/{id} {
+      allow read: if conSesion();
+      allow create: if conSesion() && request.resource.data.estado == 'pendiente';
+      allow update: if conSesion()
+                    && soloEstosCampos([
+                         'estado', 'completadaEn', 'nota', 'liderId', 'liderNombre'
+                       ]);
+      allow delete: if false;
+    }
+
+    // ---------------- interacciones ----------------
+    //
+    // El historial de mensajes es de SOLO LECTURA desde el navegador. Lo
+    // escribe únicamente el servidor con la cuenta de servicio, que no
+    // pasa por estas reglas. Así nadie puede falsificar un mensaje ni
+    // borrar una conversación.
+
+    match /interacciones/{id} {
+      allow read: if conSesion();
+      allow create, update, delete: if false;
+    }
+
+    // ---------------- difusiones ----------------
+
+    match /difusiones/{id} {
+      allow read: if conSesion();
+      allow create: if conSesion();
+      allow update: if false;   // las cierra el servidor
+      allow delete: if false;
+    }
+
+    // ---------------- auditoría ----------------
+    //
+    // Una bitácora que se puede editar no sirve como bitácora.
+
+    match /auditoria/{id} {
+      allow read: if conSesion();
+      allow create: if conSesion();
+      allow update, delete: if false;
+    }
+
+    // ---------------- todo lo demás ----------------
+
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

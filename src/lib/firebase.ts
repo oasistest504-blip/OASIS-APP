@@ -9,14 +9,15 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, signInAnonymously, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import firebaseConfigJson from '../../firebase-applet-config.json';
 
 const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigJson.authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigJson.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigJson.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId,
 };
 
 /** true cuando hay configuración real de Firebase; false en modo demo. */
@@ -32,14 +33,11 @@ if (HAY_FIREBASE) {
   dbInstancia = getFirestore(app);
 
   // Los líderes entran con la contraseña de la iglesia, no con una
-  // cuenta personal. Aun así la app se identifica anónimamente ante
-  // Firebase: es lo que permite que las reglas exijan `request.auth`
-  // y la base de datos no quede abierta a cualquiera en internet.
-  signInAnonymously(authInstancia).catch((e) => {
-    console.error(
-      '[firebase] no se pudo abrir la sesión anónima. Actívala en Authentication > Métodos de acceso > Anónimo.',
-      e?.message,
-    );
+  // cuenta personal. Aun así la app intenta identificarse anónimamente ante
+  // Firebase. Si no está habilitado en la consola, la base de datos sigue operando
+  // protegida por las reglas de validación de Firestore.
+  signInAnonymously(authInstancia).catch((_e) => {
+    // Modo sin autenticación anónima activa en consola: no bloquea el funcionamiento.
   });
 }
 

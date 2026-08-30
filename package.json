@@ -5,11 +5,10 @@
   "description": "App de seguimiento de personas del Centro de Alabanza Oasis",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n WEB,API -c cyan,magenta \"vite\" \"npm run dev:server\"",
-    "dev:server": "tsx watch server/index.ts",
-    "build": "tsc -b && vite build",
+    "dev": "tsx server/index.ts",
+    "build": "vite build && esbuild server/index.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "preview": "vite preview",
-    "start": "tsx server/index.ts",
+    "start": "node dist/server.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -30,6 +29,7 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
+    "esbuild": "^0.28.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vite": "^6.0.7"

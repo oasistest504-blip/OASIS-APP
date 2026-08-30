@@ -186,30 +186,40 @@ app.post('/api/secuencia/correr', async (_req, res) => {
 });
 
 // ---------------------------------------------------------------------
-//  La app compilada, cuando corre en producción
+//  Vite middleware en desarrollo / estáticos en producción
 // ---------------------------------------------------------------------
 
-const aqui = path.dirname(fileURLToPath(import.meta.url));
-const carpetaCompilada = path.join(aqui, '..', 'dist');
+async function iniciarServidor() {
+  if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const carpetaCompilada = path.join(process.cwd(), 'dist');
 
-app.use(express.static(carpetaCompilada));
-app.get('*', (req, res, siguiente) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/webhook')) return siguiente();
-  res.sendFile(path.join(carpetaCompilada, 'index.html'), (error) => {
-    if (error) res.status(404).send('La app todavía no está compilada. Ejecuta: npm run build');
+    app.use(express.static(carpetaCompilada));
+    app.get('*', (req, res, siguiente) => {
+      if (req.path.startsWith('/api') || req.path.startsWith('/webhook')) return siguiente();
+      res.sendFile(path.join(carpetaCompilada, 'index.html'), (error) => {
+        if (error) res.status(404).send('La app todavía no está compilada. Ejecuta: npm run build');
+      });
+    });
+  }
+
+  app.listen(config.puerto, '0.0.0.0', () => {
+    console.log('');
+    console.log(`  Oasis Seguimiento — servidor en http://0.0.0.0:${config.puerto}`);
+    console.log(`  WhatsApp:        ${WHATSAPP_SIMULADO ? 'MODO SIMULADO (no sale ningún mensaje)' : 'conectado'}`);
+    console.log(`  Base de datos:   ${HAY_DB ? 'Firestore conectado' : 'sin conectar'}`);
+    console.log(`  Agente:          ${HAY_GEMINI ? 'Gemini activo' : 'reglas básicas (sin Gemini)'}`);
+    console.log('');
   });
-});
+}
 
-// ---------------------------------------------------------------------
-
-app.listen(config.puerto, () => {
-  console.log('');
-  console.log(`  Oasis Seguimiento — servidor en http://localhost:${config.puerto}`);
-  console.log(`  WhatsApp:        ${WHATSAPP_SIMULADO ? 'MODO SIMULADO (no sale ningún mensaje)' : 'conectado'}`);
-  console.log(`  Base de datos:   ${HAY_DB ? 'Firestore conectado' : 'sin conectar'}`);
-  console.log(`  Agente:          ${HAY_GEMINI ? 'Gemini activo' : 'reglas básicas (sin Gemini)'}`);
-  console.log('');
-});
+iniciarServidor().catch(console.error);
 
 function primerNombre(nombre: string): string {
   return (nombre ?? '').trim().split(/\s+/)[0] ?? '';

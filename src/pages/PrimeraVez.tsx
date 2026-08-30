@@ -11,9 +11,8 @@ import { store } from '../lib/store';
 import { Aviso, CampoClave } from '../components/UI';
 
 export default function PrimeraVez({ onListo }: { onListo: () => void }) {
-  const [nombre, setNombre] = useState('');
-  const [claveApostol, setClaveApostol] = useState('');
-  const [claveLideres, setClaveLideres] = useState('');
+  const [claveApostol, setClaveApostol] = useState('apostol');
+  const [claveLideres, setClaveLideres] = useState('oasis');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
@@ -21,10 +20,6 @@ export default function PrimeraVez({ onListo }: { onListo: () => void }) {
     e.preventDefault();
     setError('');
 
-    if (nombre.trim().length < 3) {
-      setError('Escribe el nombre del Apóstol.');
-      return;
-    }
     if (claveApostol.trim().length < 4 || claveLideres.trim().length < 4) {
       setError('Cada contraseña necesita al menos 4 caracteres.');
       return;
@@ -37,7 +32,7 @@ export default function PrimeraVez({ onListo }: { onListo: () => void }) {
     setGuardando(true);
     try {
       await store.crearUsuario({
-        nombre: nombre.trim(),
+        nombre: 'Apóstol',
         rol: 'apostol',
         activo: true,
         capacidadSemanal: 10,
@@ -70,22 +65,12 @@ export default function PrimeraVez({ onListo }: { onListo: () => void }) {
         {error && <Aviso tipo="peligro">{error}</Aviso>}
 
         <form onSubmit={instalar} style={{ textAlign: 'left' }}>
-          <label className="campo">
-            <span className="etiqueta">¿Cómo se llama el Apóstol?</span>
-            <input
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Pastor Ramos"
-              autoFocus
-            />
-          </label>
-
           <CampoClave
             etiqueta="Tu contraseña de Apóstol"
             valor={claveApostol}
             onChange={setClaveApostol}
             placeholder="Solo tuya"
+            autoFocus
             ayuda="Es la única que abre el panel donde se agregan y se quitan líderes. No la compartas."
           />
 

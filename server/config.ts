@@ -6,7 +6,7 @@
 import 'dotenv/config';
 
 export const config = {
-  puerto: Number(process.env.PORT ?? 8080),
+  puerto: Number(process.env.PORT ?? 3000),
   iglesia: process.env.IGLESIA_NOMBRE ?? 'Centro de Alabanza Oasis',
   limiteDiario: Number(process.env.LIMITE_DIARIO_WHATSAPP ?? 250),
 

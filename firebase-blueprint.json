@@ -1,0 +1,147 @@
+{
+  "entities": {
+    "Configuracion": {
+      "title": "Configuracion",
+      "description": "Configuración general y contraseñas de acceso",
+      "type": "object",
+      "properties": {
+        "claveLideres": { "type": "string" },
+        "claveApostol": { "type": "string" },
+        "nombreIglesia": { "type": "string" }
+      }
+    },
+    "Usuario": {
+      "title": "Usuario",
+      "description": "Líder o Apóstol del equipo pastoral",
+      "type": "object",
+      "properties": {
+        "nombre": { "type": "string" },
+        "telefono": { "type": "string" },
+        "rol": { "type": "string", "enum": ["lider", "apostol"] },
+        "activo": { "type": "boolean" },
+        "capacidadSemanal": { "type": "number" },
+        "creadoEn": { "type": "string" }
+      },
+      "required": ["nombre", "rol", "activo"]
+    },
+    "Persona": {
+      "title": "Persona",
+      "description": "Persona en seguimiento pastoral",
+      "type": "object",
+      "properties": {
+        "nombre": { "type": "string" },
+        "telefonoE164": { "type": "string" },
+        "etapa": { "type": "string" },
+        "banderas": { "type": "array" },
+        "origen": { "type": "string" },
+        "liderAsignadoId": { "type": "string" },
+        "liderAsignadoNombre": { "type": "string" },
+        "consentimiento": { "type": "object" },
+        "notas": { "type": "string" },
+        "motivoOracion": { "type": "string" },
+        "fechaIngreso": { "type": "string" },
+        "ultimoContacto": { "type": "string" },
+        "ventanaAbiertaHasta": { "type": "string" },
+        "sinRespuestaConsecutivos": { "type": "number" },
+        "pasosEnviados": { "type": "array" },
+        "creadoPorUid": { "type": "string" }
+      },
+      "required": ["nombre", "telefonoE164", "etapa"]
+    },
+    "Tarea": {
+      "title": "Tarea",
+      "description": "Tarea pastoral de llamada, visita u oración",
+      "type": "object",
+      "properties": {
+        "personaId": { "type": "string" },
+        "personaNombre": { "type": "string" },
+        "personaTelefono": { "type": "string" },
+        "liderId": { "type": "string" },
+        "liderNombre": { "type": "string" },
+        "tipo": { "type": "string" },
+        "estado": { "type": "string" },
+        "vence": { "type": "string" },
+        "creadaEn": { "type": "string" },
+        "completadaEn": { "type": "string" },
+        "nota": { "type": "string" },
+        "prioridad": { "type": "string" }
+      },
+      "required": ["personaId", "personaNombre", "liderId", "tipo", "estado", "vence"]
+    },
+    "Interaccion": {
+      "title": "Interaccion",
+      "description": "Registro de mensaje o llamada",
+      "type": "object",
+      "properties": {
+        "personaId": { "type": "string" },
+        "direccion": { "type": "string" },
+        "canal": { "type": "string" },
+        "plantilla": { "type": "string" },
+        "texto": { "type": "string" },
+        "estado": { "type": "string" },
+        "fecha": { "type": "string" }
+      },
+      "required": ["personaId", "direccion", "canal", "texto", "fecha"]
+    },
+    "Difusion": {
+      "title": "Difusion",
+      "description": "Registro de envío masivo de mensajes",
+      "type": "object",
+      "properties": {
+        "plantilla": { "type": "string" },
+        "grupo": { "type": "string" },
+        "totalDestinatarios": { "type": "number" },
+        "totalEnviados": { "type": "number" },
+        "totalFallidos": { "type": "number" },
+        "enviadoPorUid": { "type": "string" },
+        "enviadoPorNombre": { "type": "string" },
+        "fecha": { "type": "string" }
+      },
+      "required": ["plantilla", "grupo", "totalDestinatarios", "fecha"]
+    },
+    "RegistroAuditoria": {
+      "title": "RegistroAuditoria",
+      "description": "Bitácora inmutable de acciones",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "nombre": { "type": "string" },
+        "accion": { "type": "string" },
+        "objetivo": { "type": "string" },
+        "detalle": { "type": "string" },
+        "fecha": { "type": "string" }
+      },
+      "required": ["uid", "nombre", "accion", "objetivo", "fecha"]
+    }
+  },
+  "firestore": {
+    "/configuracion/acceso": {
+      "schema": { "$ref": "#/entities/Configuracion" },
+      "description": "Contraseñas y configuración general"
+    },
+    "/usuarios/{uid}": {
+      "schema": { "$ref": "#/entities/Usuario" },
+      "description": "Líderes y usuarios del sistema"
+    },
+    "/personas/{personaId}": {
+      "schema": { "$ref": "#/entities/Persona" },
+      "description": "Personas en seguimiento pastoral"
+    },
+    "/tareas/{tareaId}": {
+      "schema": { "$ref": "#/entities/Tarea" },
+      "description": "Tareas de acompañamiento"
+    },
+    "/interacciones/{interaccionId}": {
+      "schema": { "$ref": "#/entities/Interaccion" },
+      "description": "Historial de mensajes e interacciones"
+    },
+    "/difusiones/{difusionId}": {
+      "schema": { "$ref": "#/entities/Difusion" },
+      "description": "Historial de difusiones masivas"
+    },
+    "/auditoria/{registroId}": {
+      "schema": { "$ref": "#/entities/RegistroAuditoria" },
+      "description": "Bitácora de auditoría"
+    }
+  }
+}

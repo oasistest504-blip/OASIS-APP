@@ -32,10 +32,12 @@ interface ValorAuth {
   usuarios: Usuario[];
   lideres: Usuario[];
   configuracion: Configuracion;
+  config?: Configuracion;
   cargando: boolean;
   paso: PasoEntrada;
   /** true cuando no hay ningún usuario todavía: hay que instalar la app. */
   sinInstalar: boolean;
+  primeraVez?: boolean;
   esApostol: boolean;
   /** Devuelve el error, o cadena vacía si la clave era correcta. */
   entrarConClave: (clave: string) => string;
@@ -85,14 +87,19 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true);
   const [usuariosLeidos, setUsuariosLeidos] = useState(false);
 
-  useEffect(
-    () =>
-      store.observarUsuarios((lista) => {
-        setUsuarios(lista);
-        setUsuariosLeidos(true);
-      }),
-    [],
-  );
+  useEffect(() => {
+    let semillaEjecutada = false;
+    return store.observarUsuarios((lista) => {
+      setUsuarios(lista);
+      setUsuariosLeidos(true);
+      if (lista.length === 0 && !semillaEjecutada) {
+        semillaEjecutada = true;
+        store.sembrarDatosEjemplo().catch((err) => {
+          console.warn('Error al cargar datos de ejemplo en Firestore:', err);
+        });
+      }
+    });
+  }, []);
   useEffect(() => store.observarConfiguracion(setConfiguracion), []);
 
   // Recuperar la sesión anterior.
@@ -130,9 +137,11 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     usuarios,
     lideres,
     configuracion,
+    config: configuracion,
     cargando,
     paso,
     sinInstalar: usuariosLeidos && usuarios.length === 0,
+    primeraVez: usuariosLeidos && usuarios.length === 0,
     esApostol: usuario?.rol === 'apostol',
 
     entrarConClave(clave: string): string {
@@ -141,7 +150,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
 
       // La del Apóstol primero: si por accidente las dos fueran iguales,
       // manda la que da más permisos a quien de verdad la conoce.
-      if (c === normalizar(configuracion.claveApostol) || c === 'apostol') {
+      if (c === normalizar(configuracion.claveApostol)) {
         const apostol = usuarios.find((u) => u.rol === 'apostol');
         if (!apostol) {
           store.crearUsuario({
@@ -163,7 +172,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
         return '';
       }
 
-      if (c === normalizar(configuracion.claveLideres) || c === 'oasis') {
+      if (c === normalizar(configuracion.claveLideres)) {
         setPaso('elegirNombre');
         return '';
       }

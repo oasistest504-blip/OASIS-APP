@@ -30,7 +30,8 @@ let dbInstancia: Firestore | null = null;
 if (HAY_FIREBASE) {
   app = initializeApp(config);
   authInstancia = getAuth(app);
-  dbInstancia = getFirestore(app);
+  const idBase = (firebaseConfigJson as Record<string, string>).firestoreDatabaseId;
+  dbInstancia = idBase ? getFirestore(app, idBase) : getFirestore(app);
 
   // Los líderes entran con la contraseña de la iglesia, no con una
   // cuenta personal. Aun así la app intenta identificarse anónimamente ante

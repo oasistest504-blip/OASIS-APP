@@ -1,12 +1,8 @@
 {
-  "projectId": "gen-lang-client-0733186185",
-  "appId": "1:1019000722552:web:5f42f747257740fddec98d",
-  "apiKey": "AIzaSyCfpqke1Sb_O78cM59j_B99NGNetYmGc2E",
-  "authDomain": "gen-lang-client-0733186185.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-oasisapp-f1eaa49e-a579-41db-aa82-0dbc2f4e357c",
-  "storageBucket": "gen-lang-client-0733186185.firebasestorage.app",
-  "messagingSenderId": "1019000722552",
-  "measurementId": "",
-  "oAuthClientId": "1019000722552-inchokjcgs3702lc54jk6tvg47dt161n.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "projectId": "oasis-seguimiento",
+  "appId": "1:776486914798:web:ab107bc3ac469c496bc1ff",
+  "apiKey": "AIzaSyDyZeUAJMzfscEEBnMjVSBucvZQ7ujLDQ4",
+  "authDomain": "oasis-seguimiento.firebaseapp.com",
+  "storageBucket": "oasis-seguimiento.firebasestorage.app",
+  "messagingSenderId": "776486914798"
 }

@@ -186,8 +186,18 @@ export default function PanelApostol({
                     <ChipLider nombre={p.liderAsignadoNombre} />
                   </div>
                 </div>
-                <span className={`pildora ${dias <= 2 ? 'espera' : 'stop'}`}>
-                  {dias === 0 ? 'hoy' : `${dias} ${dias === 1 ? 'día' : 'días'}`}
+                <span
+                  id="badge-espera-oracion"
+                  className={`pildora ${dias <= 2 ? 'espera' : 'stop'}`}
+                  title="Tiempo esperando llamada de oración"
+                  style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, padding: '4px 10px' }}
+                >
+                  <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.04em', opacity: 0.85, fontWeight: 700 }}>
+                    Esperando
+                  </span>
+                  <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                    {dias === 0 ? 'Desde hoy' : `${dias} ${dias === 1 ? 'día' : 'días'}`}
+                  </span>
                 </span>
               </button>
             ))}

@@ -238,7 +238,7 @@ export default function Tareas({
                     )}
                   </div>
 
-                  {t.estado === 'pendiente' && (
+                  {!esApostol && t.estado === 'pendiente' && (
                     <button
                       type="button"
                       className="btn chico hecho"
@@ -249,6 +249,11 @@ export default function Tareas({
                     >
                       <IconoCheck /> Marcar hecha
                     </button>
+                  )}
+                  {esApostol && t.estado === 'pendiente' && (
+                    <span className="texto-chico" style={{ color: 'var(--tinta-3)', fontStyle: 'italic' }}>
+                      Asignada a {t.liderNombre}
+                    </span>
                   )}
                 </div>
 

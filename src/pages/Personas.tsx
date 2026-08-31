@@ -3,8 +3,9 @@ import { useAuth } from '../context/AuthContext';
 import { useDatos } from '../context/DatosContext';
 import { ETAPAS, BANDERAS, type Etapa, type Bandera } from '../lib/types';
 import { mostrarTelefono } from '../lib/telefono';
-import { ChipLider, Inicial, Vacio } from '../components/UI';
-import { IconoBuscar, IconoMas } from '../components/Iconos';
+import { ChipLider, Inicial, Vacio, Aviso } from '../components/UI';
+import { IconoBuscar, IconoMas, IconoExcel } from '../components/Iconos';
+import { descargarPersonasCSV } from '../lib/exportar';
 import type { Vista } from '../App';
 
 export default function Personas({
@@ -14,11 +15,23 @@ export default function Personas({
 }) {
   const { esApostol, usuario, usuarios } = useAuth();
   const { personas } = useDatos();
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const [busqueda, setBusqueda] = useState('');
   const [etapaFiltro, setEtapaFiltro] = useState<string>('todas');
   const [banderaFiltro, setBanderaFiltro] = useState<string>('todas');
   const [liderFiltro, setLiderFiltro] = useState<string>('todos');
+
+  function exportarLista() {
+    const dataAExportar = listaFiltrada.length > 0 ? listaFiltrada : personas;
+    if (dataAExportar.length === 0) {
+      setAviso('No hay personas para exportar.');
+      return;
+    }
+    descargarPersonasCSV(dataAExportar);
+    setAviso(`¡Archivo Excel descargado con ${dataAExportar.length} personas!`);
+    setTimeout(() => setAviso(null), 4000);
+  }
 
   const listaFiltrada = useMemo(() => {
     return personas.filter((p) => {
@@ -63,17 +76,35 @@ export default function Personas({
 
   return (
     <div style={{ paddingBottom: 24 }}>
-      <div className="fila-entre" style={{ marginBottom: 4 }}>
+      <div className="fila-entre" style={{ marginBottom: 4, alignItems: 'center' }}>
         <h1>Personas</h1>
-        <button className="btn chico" onClick={() => ir('inicio')}>
-          <IconoMas /> Registrar
-        </button>
+        <div className="fila" style={{ gap: 8 }}>
+          {esApostol && (
+            <button
+              type="button"
+              className="btn secundario chico"
+              onClick={exportarLista}
+              title="Descargar en Excel (CSV)"
+            >
+              <IconoExcel size={15} /> Exportar
+            </button>
+          )}
+          <button className="btn chico" onClick={() => ir('inicio')}>
+            <IconoMas /> Registrar
+          </button>
+        </div>
       </div>
       <p className="texto-medio" style={{ marginBottom: 16 }}>
         {esApostol
           ? `${personas.length} personas registradas en la iglesia.`
           : `Tus personas en seguimiento pastoral.`}
       </p>
+
+      {aviso && (
+        <div style={{ marginBottom: 14 }}>
+          <Aviso tipo="exito" titulo="Exportación">{aviso}</Aviso>
+        </div>
+      )}
 
       {/* Buscador y filtros */}
       <div className="tarjeta" style={{ marginBottom: 16, padding: '12px 14px' }}>

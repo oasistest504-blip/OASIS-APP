@@ -27,7 +27,17 @@ import {
   Heart,
   Home,
   FileText,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
+
+export function IconoDescargar({ className, size = 18 }: { className?: string; size?: number }) {
+  return <Download size={size} className={className} />;
+}
+
+export function IconoExcel({ className, size = 18 }: { className?: string; size?: number }) {
+  return <FileSpreadsheet size={size} className={className} />;
+}
 
 export function IconoMas({ className, size = 18 }: { className?: string; size?: number }) {
   return <Plus size={size} className={className} />;

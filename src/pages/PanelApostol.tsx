@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useDatos } from '../context/DatosContext';
 import { useAuth } from '../context/AuthContext';
 import { estaVencida } from '../lib/reglas';
 import { ETAPAS, ETAPA_PLURAL } from '../lib/types';
 import { GRUPOS } from '../lib/grupos';
 import { Aviso, ChipLider, Vacio } from '../components/UI';
-import { IconoDifundir, IconoEquipo, IconoMas } from '../components/Iconos';
+import { IconoDifundir, IconoEquipo, IconoMas, IconoDescargar, IconoExcel, IconoDocumento } from '../components/Iconos';
+import { descargarPersonasCSV, descargarRespaldoJSON } from '../lib/exportar';
 import type { Vista } from '../App';
 
 export default function PanelApostol({
@@ -17,6 +18,27 @@ export default function PanelApostol({
 }) {
   const { personas, tareas } = useDatos();
   const { usuarios } = useAuth();
+  const [avisoExportacion, setAvisoExportacion] = useState<string | null>(null);
+
+  function manejarDescargaCSV() {
+    if (personas.length === 0) {
+      setAvisoExportacion('No hay personas registradas para exportar.');
+      return;
+    }
+    descargarPersonasCSV(personas);
+    setAvisoExportacion(`¡Archivo Excel (CSV) descargado con éxito con ${personas.length} personas!`);
+    setTimeout(() => setAvisoExportacion(null), 5000);
+  }
+
+  function manejarDescargaJSON() {
+    if (personas.length === 0) {
+      setAvisoExportacion('No hay personas registradas para exportar.');
+      return;
+    }
+    descargarRespaldoJSON(personas, tareas);
+    setAvisoExportacion(`¡Respaldo completo descargado con éxito!`);
+    setTimeout(() => setAvisoExportacion(null), 5000);
+  }
 
   const m = useMemo(() => {
     const hace7 = Date.now() - 7 * 86400000;
@@ -104,7 +126,26 @@ export default function PanelApostol({
 
   return (
     <div style={{ paddingBottom: 20 }}>
-      <h1 style={{ marginBottom: 14 }}>Panel del Apóstol</h1>
+      <div className="fila-entre" style={{ marginBottom: 14, alignItems: 'center' }}>
+        <h1 style={{ margin: 0 }}>Panel del Apóstol</h1>
+        <button
+          type="button"
+          className="btn chico"
+          onClick={manejarDescargaCSV}
+          title="Descargar datos en Excel (CSV)"
+          style={{ background: 'var(--azul-brillante)', color: '#fff' }}
+        >
+          <IconoExcel size={16} /> Exportar Excel
+        </button>
+      </div>
+
+      {avisoExportacion && (
+        <div style={{ marginBottom: 14 }}>
+          <Aviso tipo="exito" titulo="Descarga de Datos">
+            {avisoExportacion}
+          </Aviso>
+        </div>
+      )}
 
       {/* El indicador que manda: no el promedio, sino quién lleva más
           tiempo esperando. Un promedio bueno puede esconder a alguien
@@ -325,6 +366,40 @@ export default function PanelApostol({
         >
           <IconoDifundir /> Abrir la pantalla de difusión
         </button>
+      </div>
+
+      <div className="seccion">
+        <div className="rotulo">Exportar y respaldar datos</div>
+        <div className="tarjeta" style={{ padding: '16px 18px' }}>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--tinta-1)', marginBottom: 4 }}>
+              Base de datos de personas ({personas.length} registradas)
+            </div>
+            <p className="texto-chico" style={{ margin: 0 }}>
+              Descarga la lista completa con nombres, números de contacto, líderes pastorales asignados, etapas, motivos de oración y notas.
+            </p>
+          </div>
+
+          <div className="fila" style={{ gap: 10, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn secundario"
+              onClick={manejarDescargaCSV}
+              style={{ flex: '1 1 180px', justifyContent: 'center' }}
+            >
+              <IconoExcel size={18} /> Descargar en Excel (CSV)
+            </button>
+
+            <button
+              type="button"
+              className="btn secundario"
+              onClick={manejarDescargaJSON}
+              style={{ flex: '1 1 180px', justifyContent: 'center' }}
+            >
+              <IconoDescargar size={18} /> Respaldo Completo (JSON)
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="seccion">

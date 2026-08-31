@@ -5,7 +5,7 @@ import { estaVencida, completarTarea } from '../lib/reglas';
 import { TIPO_TAREA_LABEL, type Tarea, type TipoTarea } from '../lib/types';
 import { mostrarTelefono, enlaceWhatsApp, enlaceLlamada } from '../lib/telefono';
 import { Aviso, ChipLider, Modal, Vacio, hace } from '../components/UI';
-import { IconoCheck, IconoMas, IconoTelefono, IconoWhatsApp } from '../components/Iconos';
+import { IconoCheck, IconoMas, IconoTelefono, IconoWhatsApp, IconoAtras } from '../components/Iconos';
 import type { Vista } from '../App';
 
 export default function Tareas({
@@ -75,6 +75,18 @@ export default function Tareas({
 
   return (
     <div style={{ paddingBottom: 24 }}>
+      {esApostol && (
+        <div className="fila-entre" style={{ marginBottom: 10 }}>
+          <button
+            type="button"
+            className="btn fantasma chico"
+            onClick={() => ir('panel')}
+          >
+            <IconoAtras /> Volver al panel
+          </button>
+        </div>
+      )}
+
       <div className="fila-entre" style={{ marginBottom: 4 }}>
         <h1>{esApostol ? 'Seguimiento y Tareas' : 'Mis Tareas'}</h1>
         {esApostol && (

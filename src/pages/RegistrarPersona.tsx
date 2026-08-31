@@ -8,7 +8,7 @@ import { elegirLiderConMenosCarga } from '../lib/reglas';
 import { PLANTILLAS } from '../lib/plantillas';
 import { ORIGENES, MEDIOS_CONSENTIMIENTO, type Persona } from '../lib/types';
 import { Aviso, ChipLider, Inicial } from '../components/UI';
-import { IconoCheck, IconoMas, IconoWhatsApp } from '../components/Iconos';
+import { IconoCheck, IconoMas, IconoWhatsApp, IconoAtras } from '../components/Iconos';
 import type { Vista } from '../App';
 
 const PLANTILLA_BIENVENIDA = PLANTILLAS.oasis_bienvenida;
@@ -181,6 +181,18 @@ export default function RegistrarPersona({
 
   return (
     <div style={{ paddingBottom: 24 }}>
+      {esApostol && (
+        <div className="fila-entre" style={{ marginBottom: 10 }}>
+          <button
+            type="button"
+            className="btn fantasma chico"
+            onClick={() => ir('panel')}
+          >
+            <IconoAtras /> Volver al panel
+          </button>
+        </div>
+      )}
+
       <h1 style={{ marginBottom: 4 }}>Registrar persona</h1>
       <p className="texto-medio" style={{ marginBottom: 18 }}>
         Para personas que visitan la iglesia por primera vez o dejaron sus datos.

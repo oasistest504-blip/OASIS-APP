@@ -4,7 +4,7 @@ import { useDatos } from '../context/DatosContext';
 import { ETAPAS, BANDERAS, type Etapa, type Bandera } from '../lib/types';
 import { mostrarTelefono } from '../lib/telefono';
 import { ChipLider, Inicial, Vacio, Aviso } from '../components/UI';
-import { IconoBuscar, IconoMas, IconoExcel } from '../components/Iconos';
+import { IconoBuscar, IconoMas, IconoExcel, IconoAtras } from '../components/Iconos';
 import { descargarPersonasExcel } from '../lib/exportar';
 import type { Vista } from '../App';
 
@@ -76,6 +76,18 @@ export default function Personas({
 
   return (
     <div style={{ paddingBottom: 24 }}>
+      {esApostol && (
+        <div className="fila-entre" style={{ marginBottom: 10 }}>
+          <button
+            type="button"
+            className="btn fantasma chico"
+            onClick={() => ir('panel')}
+          >
+            <IconoAtras /> Volver al panel
+          </button>
+        </div>
+      )}
+
       <div className="fila-entre" style={{ marginBottom: 4, alignItems: 'center' }}>
         <h1>Personas</h1>
         <div className="fila" style={{ gap: 8 }}>

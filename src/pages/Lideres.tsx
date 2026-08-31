@@ -15,7 +15,7 @@ import { normalizarTelefono, mostrarTelefono, enlaceWhatsApp } from '../lib/tele
 import { elegirLiderConMenosCarga, estaVencida } from '../lib/reglas';
 import { PLANTILLAS } from '../lib/plantillas';
 import { Aviso, Inicial, Modal, Vacio, hace } from '../components/UI';
-import { IconoMas, IconoWhatsApp, IconoCheck, IconoTareas } from '../components/Iconos';
+import { IconoMas, IconoWhatsApp, IconoCheck, IconoTareas, IconoAtras } from '../components/Iconos';
 import type { Usuario } from '../lib/types';
 import type { Vista } from '../App';
 
@@ -238,6 +238,16 @@ export default function Lideres({
 
   return (
     <div style={{ paddingBottom: 24 }}>
+      <div className="fila-entre" style={{ marginBottom: 10 }}>
+        <button
+          type="button"
+          className="btn fantasma chico"
+          onClick={() => ir('panel')}
+        >
+          <IconoAtras /> Volver al panel
+        </button>
+      </div>
+
       <div className="fila-entre" style={{ marginBottom: 4 }}>
         <h1>Líderes</h1>
         <span className="texto-chico">{lideres.length} en el equipo</span>

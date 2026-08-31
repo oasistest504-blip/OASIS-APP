@@ -20,6 +20,7 @@ import { Cargando } from './components/UI';
 import { LogoOasis } from './components/LogoOasis';
 import {
   IconoAjustes,
+  IconoAtras,
   IconoCapas,
   IconoEquipo,
   IconoMas,
@@ -44,6 +45,7 @@ export default function App() {
   const { personas, tareas } = useDatos();
 
   const [vista, setVista] = useState<Vista>(esApostol ? 'panel' : 'inicio');
+  const [historialVistas, setHistorialVistas] = useState<Vista[]>([]);
   const [personaIdSeleccionada, setPersonaIdSeleccionada] = useState<string | undefined>(undefined);
   const [grupoDifusion, setGrupoDifusion] = useState<string | undefined>(undefined);
   const [mensajeAviso, setMensajeAviso] = useState<string | null>(null);
@@ -52,15 +54,38 @@ export default function App() {
   useEffect(() => {
     if (usuario) {
       setVista(esApostol ? 'panel' : 'inicio');
+      setHistorialVistas([]);
     }
   }, [usuario?.id, esApostol]);
 
   function ir(v: Vista, id?: string, grupo?: string) {
+    if (v !== vista) {
+      setHistorialVistas((prev) => [...prev, vista]);
+    }
     setVista(v);
     if (id !== undefined) setPersonaIdSeleccionada(id);
     if (grupo !== undefined) setGrupoDifusion(grupo);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  function retroceder() {
+    if (historialVistas.length > 0) {
+      const nuevoHistorial = [...historialVistas];
+      const vistaAnterior = nuevoHistorial.pop();
+      setHistorialVistas(nuevoHistorial);
+      if (vistaAnterior) {
+        setVista(vistaAnterior);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+    // Si no hay historial previo, volver a la pantalla principal correspondiente al rol
+    setVista(esApostol ? 'panel' : 'inicio');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  const vistaPrincipal = esApostol ? 'panel' : 'inicio';
+  const mostrarBotonAtras = vista !== vistaPrincipal || historialVistas.length > 0;
 
   function avisar(mensaje: string) {
     setMensajeAviso(mensaje);
@@ -123,6 +148,27 @@ export default function App() {
       <header className="cabecera">
         <div className="fila-entre max-ancho">
           <div className="fila" style={{ gap: 8, alignItems: 'center' }}>
+            {mostrarBotonAtras && (
+              <button
+                type="button"
+                className="btn fantasma chico"
+                onClick={retroceder}
+                title="Volver a la sección anterior"
+                aria-label="Volver atrás"
+                style={{
+                  padding: '6px 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                }}
+              >
+                <IconoAtras size={18} />
+                <span>Atrás</span>
+              </button>
+            )}
+
             <div
               onClick={() => ir(esApostol ? 'panel' : 'inicio')}
               style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}

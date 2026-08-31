@@ -40,7 +40,9 @@ interface ValorAuth {
   primeraVez?: boolean;
   esApostol: boolean;
   /** Devuelve el error, o cadena vacía si la clave era correcta. */
-  entrarConClave: (clave: string) => string;
+  entrarConClave: (clave: string, rol?: 'apostol' | 'lider') => string;
+  entrarComoApostol: (clave: string) => string;
+  entrarComoLider: (clave: string) => string;
   elegirQuienSoy: (id: string) => void;
   volverAClave: () => void;
   salir: () => void;
@@ -137,26 +139,26 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     primeraVez: usuariosLeidos && usuarios.length === 0,
     esApostol: usuario?.rol === 'apostol',
 
-    entrarConClave(clave: string): string {
+    entrarComoApostol(clave: string): string {
       const c = normalizar(clave);
-      if (!c) return 'Escribe la contraseña.';
+      if (!c) return 'Escribe la contraseña de Apóstol.';
 
-      // La del Apóstol primero: si por accidente las dos fueran iguales,
-      // manda la que da más permisos a quien de verdad la conoce.
       if (c === normalizar(configuracion.claveApostol)) {
         const apostol = usuarios.find((u) => u.rol === 'apostol');
         if (!apostol) {
-          store.crearUsuario({
-            nombre: 'Apóstol',
-            rol: 'apostol',
-            activo: true,
-            capacidadSemanal: 10,
-            creadoEn: new Date().toISOString(),
-          }).then((id) => {
-            setUsuarioId(id);
-            setPaso('dentro');
-            guardarSesion({ usuarioId: id, esApostol: true });
-          });
+          store
+            .crearUsuario({
+              nombre: 'Apóstol',
+              rol: 'apostol',
+              activo: true,
+              capacidadSemanal: 10,
+              creadoEn: new Date().toISOString(),
+            })
+            .then((id) => {
+              setUsuarioId(id);
+              setPaso('dentro');
+              guardarSesion({ usuarioId: id, esApostol: true });
+            });
           return '';
         }
         setUsuarioId(apostol.id);
@@ -165,9 +167,34 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
         return '';
       }
 
+      return 'Contraseña de Apóstol incorrecta.';
+    },
+
+    entrarComoLider(clave: string): string {
+      const c = normalizar(clave);
+      if (!c) return 'Escribe la contraseña de Líderes.';
+
       if (c === normalizar(configuracion.claveLideres)) {
         setPaso('elegirNombre');
         return '';
+      }
+
+      return 'Contraseña de Líderes incorrecta.';
+    },
+
+    entrarConClave(clave: string, rol?: 'apostol' | 'lider'): string {
+      if (rol === 'apostol') return valor.entrarComoApostol(clave);
+      if (rol === 'lider') return valor.entrarComoLider(clave);
+
+      const c = normalizar(clave);
+      if (!c) return 'Escribe la contraseña.';
+
+      if (c === normalizar(configuracion.claveApostol)) {
+        return valor.entrarComoApostol(clave);
+      }
+
+      if (c === normalizar(configuracion.claveLideres)) {
+        return valor.entrarComoLider(clave);
       }
 
       return 'Esa contraseña no es. Pídesela al Apóstol.';

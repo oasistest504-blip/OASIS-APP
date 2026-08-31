@@ -5,8 +5,14 @@ import { IconoAtras } from '../components/Iconos';
 import { LogoOasis } from '../components/LogoOasis';
 
 export default function Login() {
-  const { paso, entrarConClave, elegirQuienSoy, volverAClave, lideres } =
-    useAuth();
+  const {
+    paso,
+    entrarComoApostol,
+    entrarComoLider,
+    elegirQuienSoy,
+    volverAClave,
+    lideres,
+  } = useAuth();
   const [claveApostol, setClaveApostol] = useState('');
   const [claveLider, setClaveLider] = useState('');
   const [error, setError] = useState('');
@@ -16,10 +22,10 @@ export default function Login() {
     setError('');
     const claveAProbar = claveApostol.trim();
     if (!claveAProbar) {
-      setError('Escribe la contraseña.');
+      setError('Escribe la contraseña de Apóstol.');
       return;
     }
-    const problema = entrarConClave(claveAProbar);
+    const problema = entrarComoApostol(claveAProbar);
     if (problema) {
       setError(problema);
     } else {
@@ -32,10 +38,10 @@ export default function Login() {
     setError('');
     const claveAProbar = claveLider.trim();
     if (!claveAProbar) {
-      setError('Escribe la contraseña.');
+      setError('Escribe la contraseña de Líderes.');
       return;
     }
-    const problema = entrarConClave(claveAProbar);
+    const problema = entrarComoLider(claveAProbar);
     if (problema) {
       setError(problema);
     } else {

@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { LogoOasis } from '../components/LogoOasis';
 
 export default function PrimeraVez({ onListo }: { onListo?: () => void }) {
-  const { entrarConClave } = useAuth();
+  const { entrarComoApostol, entrarComoLider } = useAuth();
   const [claveApostol, setClaveApostol] = useState('');
   const [claveLideres, setClaveLideres] = useState('');
   const [error, setError] = useState('');
@@ -42,9 +42,9 @@ export default function PrimeraVez({ onListo }: { onListo?: () => void }) {
       });
       
       if (rolDestino === 'apostol') {
-        entrarConClave(finalApostol);
+        entrarComoApostol(finalApostol);
       } else {
-        entrarConClave(finalLideres);
+        entrarComoLider(finalLideres);
       }
       onListo?.();
     } catch (e: any) {

@@ -134,10 +134,6 @@ export default function App() {
     return <Cargando texto="Iniciando Oasis Seguimiento…" />;
   }
 
-  if (primeraVez) {
-    return <PrimeraVez />;
-  }
-
   if (!usuario) {
     return <Login />;
   }

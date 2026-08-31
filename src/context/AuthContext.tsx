@@ -39,6 +39,12 @@ interface ValorAuth {
   sinInstalar: boolean;
   primeraVez?: boolean;
   esApostol: boolean;
+  /** Inicializa la app por primera vez creando la configuración y los usuarios iniciales */
+  inicializarApp: (
+    claveApostol: string,
+    claveLideres: string,
+    rolDestino: 'apostol' | 'lider',
+  ) => Promise<void>;
   /** Devuelve el error, o cadena vacía si la clave era correcta. */
   entrarConClave: (clave: string, rol?: 'apostol' | 'lider') => string;
   entrarComoApostol: (clave: string) => string;
@@ -138,6 +144,52 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     sinInstalar: usuariosLeidos && usuarios.length === 0,
     primeraVez: usuariosLeidos && usuarios.length === 0,
     esApostol: usuario?.rol === 'apostol',
+
+    async inicializarApp(
+      claveApostol: string,
+      claveLideres: string,
+      rolDestino: 'apostol' | 'lider',
+    ) {
+      const apostolClave = claveApostol.trim();
+      const lideresClave = claveLideres.trim();
+
+      await store.guardarConfiguracion({
+        claveApostol: apostolClave,
+        claveLideres: lideresClave,
+        nombreIglesia: 'Centro de Alabanza Oasis',
+      });
+
+      setConfiguracion((prev) => ({
+        ...prev,
+        claveApostol: apostolClave,
+        claveLideres: lideresClave,
+      }));
+
+      const apostolId = await store.crearUsuario({
+        nombre: 'Apóstol',
+        rol: 'apostol',
+        activo: true,
+        capacidadSemanal: 10,
+        creadoEn: new Date().toISOString(),
+      });
+
+      if (rolDestino === 'apostol') {
+        setUsuarioId(apostolId);
+        setPaso('dentro');
+        guardarSesion({ usuarioId: apostolId, esApostol: true });
+      } else {
+        const liderId = await store.crearUsuario({
+          nombre: 'Líder Pastoral',
+          rol: 'lider',
+          activo: true,
+          capacidadSemanal: 5,
+          creadoEn: new Date().toISOString(),
+        });
+        setUsuarioId(liderId);
+        setPaso('dentro');
+        guardarSesion({ usuarioId: liderId, esApostol: false });
+      }
+    },
 
     entrarComoApostol(clave: string): string {
       const c = normalizar(clave);

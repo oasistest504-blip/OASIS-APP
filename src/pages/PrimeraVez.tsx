@@ -7,13 +7,12 @@
 // =====================================================================
 
 import { useState } from 'react';
-import { store } from '../lib/store';
 import { Aviso, CampoClave } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { LogoOasis } from '../components/LogoOasis';
 
 export default function PrimeraVez({ onListo }: { onListo?: () => void }) {
-  const { entrarComoApostol, entrarComoLider } = useAuth();
+  const { inicializarApp } = useAuth();
   const [claveApostol, setClaveApostol] = useState('');
   const [claveLideres, setClaveLideres] = useState('');
   const [error, setError] = useState('');
@@ -25,30 +24,26 @@ export default function PrimeraVez({ onListo }: { onListo?: () => void }) {
     const finalApostol = claveApostol.trim();
     const finalLideres = claveLideres.trim();
 
-    if (finalApostol.length < 4 || finalLideres.length < 4) {
-      setError('Cada contraseña necesita al menos 4 caracteres.');
+    if (!finalApostol || finalApostol.length < 4) {
+      setError('Escribe la contraseña del Apóstol (al menos 4 caracteres).');
+      return;
+    }
+    if (!finalLideres || finalLideres.length < 4) {
+      setError('Escribe la contraseña para los Líderes (al menos 4 caracteres).');
       return;
     }
     if (finalApostol.toLowerCase() === finalLideres.toLowerCase()) {
-      setError('Las dos contraseñas tienen que ser distintas.');
+      setError('Las dos contraseñas deben ser diferentes entre sí.');
       return;
     }
 
     setGuardando(true);
     try {
-      await store.guardarConfiguracion({
-        claveApostol: finalApostol,
-        claveLideres: finalLideres,
-      });
-      
-      if (rolDestino === 'apostol') {
-        entrarComoApostol(finalApostol);
-      } else {
-        entrarComoLider(finalLideres);
-      }
+      await inicializarApp(finalApostol, finalLideres, rolDestino);
       onListo?.();
     } catch (e: any) {
-      setError(e?.message ?? 'No se pudo guardar. Intenta otra vez.');
+      setError(e?.message ?? 'No se pudo inicializar la app. Intenta otra vez.');
+    } finally {
       setGuardando(false);
     }
   }

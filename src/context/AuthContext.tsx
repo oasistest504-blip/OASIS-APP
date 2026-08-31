@@ -88,16 +88,9 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
   const [usuariosLeidos, setUsuariosLeidos] = useState(false);
 
   useEffect(() => {
-    let semillaEjecutada = false;
     return store.observarUsuarios((lista) => {
       setUsuarios(lista);
       setUsuariosLeidos(true);
-      if (lista.length === 0 && !semillaEjecutada) {
-        semillaEjecutada = true;
-        store.sembrarDatosEjemplo().catch((err) => {
-          console.warn('Error al cargar datos de ejemplo en Firestore:', err);
-        });
-      }
     });
   }, []);
   useEffect(() => store.observarConfiguracion(setConfiguracion), []);

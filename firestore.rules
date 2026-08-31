@@ -5,6 +5,10 @@ service cloud.firestore {
 
     // ---------------- ayudas ----------------
 
+    function conSesion() {
+      return request.auth != null;
+    }
+
     function camposTocados() {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
@@ -15,22 +19,24 @@ service cloud.firestore {
 
     // ---------------- configuración: las contraseñas ----------------
     match /configuracion/{docId} {
-      allow read, write: if true;
+      allow read, write: if conSesion();
     }
 
     // ---------------- usuarios: líderes y Apóstol ----------------
     match /usuarios/{uid} {
-      allow read, write: if true;
+      allow read, write: if conSesion();
     }
 
     // ---------------- personas ----------------
     match /personas/{id} {
-      allow read: if true;
-      allow create: if request.resource.data.consentimiento.otorgado == true
+      allow read: if conSesion();
+      allow create: if conSesion()
+                    && request.resource.data.consentimiento.otorgado == true
                     && request.resource.data.telefonoE164 is string
                     && request.resource.data.telefonoE164.size() >= 10
                     && request.resource.data.telefonoE164.size() <= 15;
-      allow update: if soloEstosCampos([
+      allow update: if conSesion()
+                    && soloEstosCampos([
                       'etapa', 'banderas', 'notas', 'ultimoContacto',
                       'motivoOracion', 'liderAsignadoId', 'liderAsignadoNombre',
                       'ventanaAbiertaHasta', 'sinRespuestaConsecutivos', 'pasosEnviados'
@@ -40,8 +46,9 @@ service cloud.firestore {
 
     // ---------------- tareas ----------------
     match /tareas/{id} {
-      allow read, create: if true;
-      allow update: if soloEstosCampos([
+      allow read, create: if conSesion();
+      allow update: if conSesion()
+                    && soloEstosCampos([
                       'estado', 'completadaEn', 'nota', 'liderId', 'liderNombre'
                     ]);
       allow delete: if false;
@@ -49,19 +56,19 @@ service cloud.firestore {
 
     // ---------------- interacciones ----------------
     match /interacciones/{id} {
-      allow read, create: if true;
+      allow read, create: if conSesion();
       allow update, delete: if false;
     }
 
     // ---------------- difusiones ----------------
     match /difusiones/{id} {
-      allow read, create: if true;
+      allow read, create: if conSesion();
       allow update, delete: if false;
     }
 
     // ---------------- auditoría ----------------
     match /auditoria/{id} {
-      allow read, create: if true;
+      allow read, create: if conSesion();
       allow update, delete: if false;
     }
 

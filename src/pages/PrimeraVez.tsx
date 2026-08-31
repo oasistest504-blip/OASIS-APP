@@ -22,8 +22,8 @@ export default function PrimeraVez({ onListo }: { onListo?: () => void }) {
   async function empezar(rolDestino: 'apostol' | 'lider') {
     setError('');
 
-    const finalApostol = claveApostol.trim() || 'apostol';
-    const finalLideres = claveLideres.trim() || 'oasis';
+    const finalApostol = claveApostol.trim();
+    const finalLideres = claveLideres.trim();
 
     if (finalApostol.length < 4 || finalLideres.length < 4) {
       setError('Cada contraseña necesita al menos 4 caracteres.');
@@ -36,7 +36,6 @@ export default function PrimeraVez({ onListo }: { onListo?: () => void }) {
 
     setGuardando(true);
     try {
-      await store.sembrarDatosEjemplo();
       await store.guardarConfiguracion({
         claveApostol: finalApostol,
         claveLideres: finalLideres,
@@ -78,7 +77,7 @@ export default function PrimeraVez({ onListo }: { onListo?: () => void }) {
               etiqueta="Contraseña del Apóstol"
               valor={claveApostol}
               onChange={setClaveApostol}
-              placeholder="Ej: apostol"
+              placeholder="Contraseña del Apóstol"
               autoFocus
               ayuda="Acceso privado con control total de supervisión, líderes y ajustes."
             />
@@ -103,7 +102,7 @@ export default function PrimeraVez({ onListo }: { onListo?: () => void }) {
               etiqueta="Contraseña para los líderes"
               valor={claveLideres}
               onChange={setClaveLideres}
-              placeholder="Ej: oasis"
+              placeholder="Contraseña para los líderes"
               ayuda="Clave compartida con el equipo para registrar personas y atender tareas."
             />
             <div style={{ marginTop: 12 }}>
@@ -113,7 +112,7 @@ export default function PrimeraVez({ onListo }: { onListo?: () => void }) {
                 disabled={guardando}
                 onClick={() => empezar('lider')}
               >
-                {guardando ? 'Iniciando…' : 'Empezar como Líder (con equipo de ejemplo)'}
+                {guardando ? 'Iniciando…' : 'Empezar como Líder'}
               </button>
             </div>
           </div>

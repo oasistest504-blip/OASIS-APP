@@ -3,20 +3,22 @@ import { useAuth } from '../context/AuthContext';
 import { Aviso, CampoClave, Inicial } from '../components/UI';
 import { IconoAtras } from '../components/Iconos';
 import { LogoOasis } from '../components/LogoOasis';
-import { store } from '../lib/store';
 
 export default function Login() {
-  const { paso, entrarConClave, elegirQuienSoy, volverAClave, lideres, configuracion } =
+  const { paso, entrarConClave, elegirQuienSoy, volverAClave, lideres } =
     useAuth();
   const [claveApostol, setClaveApostol] = useState('');
   const [claveLider, setClaveLider] = useState('');
   const [error, setError] = useState('');
-  const [sembrando, setSembrando] = useState(false);
 
   function ingresarComoApostol(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setError('');
-    const claveAProbar = claveApostol.trim() || 'apostol';
+    const claveAProbar = claveApostol.trim();
+    if (!claveAProbar) {
+      setError('Escribe la contraseña.');
+      return;
+    }
     const problema = entrarConClave(claveAProbar);
     if (problema) {
       setError(problema);
@@ -28,25 +30,16 @@ export default function Login() {
   function ingresarComoLider(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setError('');
-    const claveAProbar = claveLider.trim() || 'oasis';
+    const claveAProbar = claveLider.trim();
+    if (!claveAProbar) {
+      setError('Escribe la contraseña.');
+      return;
+    }
     const problema = entrarConClave(claveAProbar);
     if (problema) {
       setError(problema);
     } else {
       setClaveLider('');
-    }
-  }
-
-  async function cargarLideresEjemplo() {
-    setSembrando(true);
-    setError('');
-    try {
-      await store.sembrarDatosEjemplo();
-    } catch (e) {
-      console.error(e);
-      setError('No se pudieron cargar los datos de ejemplo.');
-    } finally {
-      setSembrando(false);
     }
   }
 
@@ -79,7 +72,7 @@ export default function Login() {
                     valor={claveApostol}
                     onChange={setClaveApostol}
                     autoComplete="current-password"
-                    placeholder="Ej: apostol"
+                    placeholder="Contraseña"
                   />
                   <div style={{ marginTop: 10 }}>
                     <button className="btn ancho" type="submit">
@@ -100,7 +93,7 @@ export default function Login() {
                     valor={claveLider}
                     onChange={setClaveLider}
                     autoComplete="current-password"
-                    placeholder="Ej: oasis"
+                    placeholder="Contraseña"
                   />
                   <div style={{ marginTop: 10 }}>
                     <button className="btn secundario ancho" type="submit">
@@ -109,33 +102,6 @@ export default function Login() {
                   </div>
                 </form>
               </div>
-            </div>
-
-            {/* Accesos rápidos y carga de líderes */}
-            <div
-              style={{
-                marginTop: 20,
-                padding: '12px 14px',
-                background: 'var(--fondo-suave, #f8fafc)',
-                borderRadius: 10,
-                border: '1px dashed var(--borde, #cbd5e1)',
-                textAlign: 'center',
-                fontSize: '0.82rem',
-                color: 'var(--tinta-2, #475569)',
-              }}
-            >
-              <div style={{ marginBottom: 6 }}>
-                💡 <strong>Claves por defecto:</strong> Apóstol: <code>apostol</code> &bull; Líderes: <code>oasis</code>
-              </div>
-              <button
-                type="button"
-                className="btn fantasma chico"
-                style={{ fontSize: '0.78rem', color: 'var(--azul-profundo)' }}
-                disabled={sembrando}
-                onClick={cargarLideresEjemplo}
-              >
-                {sembrando ? 'Cargando datos...' : '✨ Cargar / restaurar líderes y datos de ejemplo'}
-              </button>
             </div>
           </>
         ) : (
@@ -155,23 +121,8 @@ export default function Login() {
             {lideres.length === 0 ? (
               <div className="pila" style={{ gap: 14 }}>
                 <Aviso tipo="alerta" titulo="No hay líderes registrados">
-                  Aún no se han registrado líderes en el sistema. Puedes cargar los líderes de ejemplo para mostrar la app o ingresar como Apóstol.
+                  Aún no se han registrado líderes en el sistema. El Apóstol debe agregarlos desde el panel de administración.
                 </Aviso>
-                <button
-                  type="button"
-                  className="btn primario ancho"
-                  disabled={sembrando}
-                  onClick={cargarLideresEjemplo}
-                >
-                  {sembrando ? 'Cargando líderes...' : '✨ Cargar líderes de ejemplo (Carolina, Andrés, Diana...)'}
-                </button>
-                <button
-                  type="button"
-                  className="btn secundario ancho"
-                  onClick={() => ingresarComoApostol()}
-                >
-                  Entrar como Apóstol
-                </button>
               </div>
             ) : (
               <div className="pila">

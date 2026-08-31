@@ -6,7 +6,7 @@ import { ETAPAS, ETAPA_PLURAL } from '../lib/types';
 import { GRUPOS } from '../lib/grupos';
 import { Aviso, ChipLider, Vacio } from '../components/UI';
 import { IconoDifundir, IconoEquipo, IconoMas, IconoDescargar, IconoExcel, IconoDocumento } from '../components/Iconos';
-import { descargarPersonasCSV, descargarRespaldoJSON } from '../lib/exportar';
+import { descargarPersonasExcel, descargarTareasExcel, descargarLibroCompletoExcel, descargarRespaldoJSON } from '../lib/exportar';
 import type { Vista } from '../App';
 
 export default function PanelApostol({
@@ -20,13 +20,33 @@ export default function PanelApostol({
   const { usuarios } = useAuth();
   const [avisoExportacion, setAvisoExportacion] = useState<string | null>(null);
 
-  function manejarDescargaCSV() {
+  function manejarDescargaLibroCompleto() {
     if (personas.length === 0) {
       setAvisoExportacion('No hay personas registradas para exportar.');
       return;
     }
-    descargarPersonasCSV(personas);
-    setAvisoExportacion(`¡Archivo Excel (CSV) descargado con éxito con ${personas.length} personas!`);
+    descargarLibroCompletoExcel(personas, tareas);
+    setAvisoExportacion(`¡Reporte integral en Excel (.xlsx) descargado! Incluye pestañas de Personas, Tareas y Resumen Estadístico con columnas organizadas.`);
+    setTimeout(() => setAvisoExportacion(null), 6000);
+  }
+
+  function manejarDescargaPersonasExcel() {
+    if (personas.length === 0) {
+      setAvisoExportacion('No hay personas registradas para exportar.');
+      return;
+    }
+    descargarPersonasExcel(personas);
+    setAvisoExportacion(`¡Libro de Excel (.xlsx) de personas descargado (${personas.length} registros ordenados alfabéticamente en columnas independientes)!`);
+    setTimeout(() => setAvisoExportacion(null), 6000);
+  }
+
+  function manejarDescargaTareasExcel() {
+    if (tareas.length === 0) {
+      setAvisoExportacion('No hay tareas de seguimiento registradas para exportar.');
+      return;
+    }
+    descargarTareasExcel(tareas);
+    setAvisoExportacion(`¡Reporte de seguimiento en Excel (.xlsx) descargado (${tareas.length} tareas)!`);
     setTimeout(() => setAvisoExportacion(null), 5000);
   }
 
@@ -36,7 +56,7 @@ export default function PanelApostol({
       return;
     }
     descargarRespaldoJSON(personas, tareas);
-    setAvisoExportacion(`¡Respaldo completo descargado con éxito!`);
+    setAvisoExportacion(`¡Respaldo integral descargado con éxito!`);
     setTimeout(() => setAvisoExportacion(null), 5000);
   }
 
@@ -131,11 +151,11 @@ export default function PanelApostol({
         <button
           type="button"
           className="btn chico"
-          onClick={manejarDescargaCSV}
-          title="Descargar datos en Excel (CSV)"
+          onClick={manejarDescargaLibroCompleto}
+          title="Descargar libro de Excel completo con hojas de Personas, Tareas y Estadísticas"
           style={{ background: 'var(--azul-brillante)', color: '#fff' }}
         >
-          <IconoExcel size={16} /> Exportar Excel
+          <IconoExcel size={16} /> Descargar Reporte Excel
         </button>
       </div>
 
@@ -370,33 +390,57 @@ export default function PanelApostol({
 
       <div className="seccion">
         <div className="rotulo">Exportar y respaldar datos</div>
-        <div className="tarjeta" style={{ padding: '16px 18px' }}>
-          <div style={{ marginBottom: 12 }}>
+        <div className="tarjeta" style={{ padding: '18px 20px' }}>
+          <div style={{ marginBottom: 14 }}>
             <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--tinta-1)', marginBottom: 4 }}>
-              Base de datos de personas ({personas.length} registradas)
+              Centro de Descargas y Reportes Pastorales
             </div>
-            <p className="texto-chico" style={{ margin: 0 }}>
-              Descarga la lista completa con nombres, números de contacto, líderes pastorales asignados, etapas, motivos de oración y notas.
+            <p className="texto-chico" style={{ margin: 0, lineHeight: 1.5 }}>
+              Descarga archivos 100% nativos de Microsoft Excel (<strong>.xlsx</strong>) perfectamente tabulados en columnas individuales, con ancho automático y acentos legibles.
             </p>
           </div>
 
-          <div className="fila" style={{ gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={manejarDescargaLibroCompleto}
+              style={{
+                justifyContent: 'center',
+                padding: '10px 14px',
+                background: 'var(--azul-brillante)',
+                color: '#fff',
+                gridColumn: '1 / -1',
+              }}
+            >
+              <IconoExcel size={18} /> Descargar Reporte Integral Completo (.xlsx)
+            </button>
+
             <button
               type="button"
               className="btn secundario"
-              onClick={manejarDescargaCSV}
-              style={{ flex: '1 1 180px', justifyContent: 'center' }}
+              onClick={manejarDescargaPersonasExcel}
+              style={{ justifyContent: 'center', padding: '10px 14px' }}
             >
-              <IconoExcel size={18} /> Descargar en Excel (CSV)
+              <IconoExcel size={18} /> Directorio de Personas (.xlsx)
+            </button>
+
+            <button
+              type="button"
+              className="btn secundario"
+              onClick={manejarDescargaTareasExcel}
+              style={{ justifyContent: 'center', padding: '10px 14px' }}
+            >
+              <IconoExcel size={18} /> Tareas y Seguimiento (.xlsx)
             </button>
 
             <button
               type="button"
               className="btn secundario"
               onClick={manejarDescargaJSON}
-              style={{ flex: '1 1 180px', justifyContent: 'center' }}
+              style={{ justifyContent: 'center', padding: '10px 14px' }}
             >
-              <IconoDescargar size={18} /> Respaldo Completo (JSON)
+              <IconoDescargar size={18} /> Respaldo Digital (.json)
             </button>
           </div>
         </div>

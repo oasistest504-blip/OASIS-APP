@@ -5,7 +5,7 @@ import { ETAPAS, BANDERAS, type Etapa, type Bandera } from '../lib/types';
 import { mostrarTelefono } from '../lib/telefono';
 import { ChipLider, Inicial, Vacio, Aviso } from '../components/UI';
 import { IconoBuscar, IconoMas, IconoExcel } from '../components/Iconos';
-import { descargarPersonasCSV } from '../lib/exportar';
+import { descargarPersonasExcel } from '../lib/exportar';
 import type { Vista } from '../App';
 
 export default function Personas({
@@ -28,9 +28,9 @@ export default function Personas({
       setAviso('No hay personas para exportar.');
       return;
     }
-    descargarPersonasCSV(dataAExportar);
-    setAviso(`¡Archivo Excel descargado con ${dataAExportar.length} personas!`);
-    setTimeout(() => setAviso(null), 4000);
+    descargarPersonasExcel(dataAExportar);
+    setAviso(`¡Libro de Excel (.xlsx) generado con ${dataAExportar.length} personas en columnas organizadas!`);
+    setTimeout(() => setAviso(null), 5000);
   }
 
   const listaFiltrada = useMemo(() => {

@@ -45,13 +45,8 @@ export function ProveedorDatos({ children }: { children: ReactNode }) {
     const cancelar: Array<() => void> = [];
 
     if (esApostol) {
-      let sembradoIniciado = false;
       cancelar.push(
         store.observarPersonas((p) => {
-          if (p.length === 0 && !sembradoIniciado) {
-            sembradoIniciado = true;
-            store.sembrarDatosEjemplo().catch(() => {});
-          }
           setPersonas(p);
           setListo(true);
         }),

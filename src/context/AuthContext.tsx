@@ -27,6 +27,9 @@ import type { Configuracion, Usuario } from '../lib/types';
 /** En qué punto de la entrada va la persona. */
 export type PasoEntrada = 'clave' | 'elegirNombre' | 'dentro';
 
+/** 1 hora de inactividad antes de cerrar la sesión automáticamente (en milisegundos) */
+export const TIEMPO_INACTIVIDAD_MS = 60 * 60 * 1000;
+
 interface ValorAuth {
   usuario: Usuario | null;
   usuarios: Usuario[];
@@ -39,6 +42,8 @@ interface ValorAuth {
   sinInstalar: boolean;
   primeraVez?: boolean;
   esApostol: boolean;
+  sesionExpirada: boolean;
+  limpiarSesionExpirada: () => void;
   /** Inicializa la app por primera vez creando la configuración y los usuarios iniciales */
   inicializarApp: (
     claveApostol: string,
@@ -61,21 +66,50 @@ const LLAVE_SESION = 'oasis-sesion';
 interface SesionGuardada {
   usuarioId: string;
   esApostol: boolean;
+  ultimaActividad: number;
 }
 
-function leerSesion(): SesionGuardada | null {
+function leerSesion(): { sesion: SesionGuardada | null; expirada: boolean } {
   try {
     const crudo = localStorage.getItem(LLAVE_SESION);
-    return crudo ? (JSON.parse(crudo) as SesionGuardada) : null;
+    if (!crudo) return { sesion: null, expirada: false };
+    const sesion = JSON.parse(crudo) as Partial<SesionGuardada>;
+    if (!sesion || !sesion.usuarioId) return { sesion: null, expirada: false };
+
+    const ahora = Date.now();
+    const ultima = typeof sesion.ultimaActividad === 'number' ? sesion.ultimaActividad : 0;
+
+    // Si la sesión no tiene fecha o ya pasaron más de 60 minutos de inactividad:
+    if (!ultima || ahora - ultima > TIEMPO_INACTIVIDAD_MS) {
+      localStorage.removeItem(LLAVE_SESION);
+      return { sesion: null, expirada: true };
+    }
+
+    return {
+      sesion: {
+        usuarioId: sesion.usuarioId,
+        esApostol: !!sesion.esApostol,
+        ultimaActividad: ultima,
+      },
+      expirada: false,
+    };
   } catch {
-    return null;
+    return { sesion: null, expirada: false };
   }
 }
 
-function guardarSesion(sesion: SesionGuardada | null) {
+function guardarSesion(sesion: { usuarioId: string; esApostol: boolean; ultimaActividad?: number } | null) {
   try {
-    if (sesion) localStorage.setItem(LLAVE_SESION, JSON.stringify(sesion));
-    else localStorage.removeItem(LLAVE_SESION);
+    if (sesion) {
+      const datos: SesionGuardada = {
+        usuarioId: sesion.usuarioId,
+        esApostol: sesion.esApostol,
+        ultimaActividad: sesion.ultimaActividad ?? Date.now(),
+      };
+      localStorage.setItem(LLAVE_SESION, JSON.stringify(datos));
+    } else {
+      localStorage.removeItem(LLAVE_SESION);
+    }
   } catch {
     /* sin almacenamiento: la sesión dura mientras la pestaña esté abierta */
   }
@@ -94,6 +128,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
   const [paso, setPaso] = useState<PasoEntrada>('clave');
   const [cargando, setCargando] = useState(true);
   const [usuariosLeidos, setUsuariosLeidos] = useState(false);
+  const [sesionExpirada, setSesionExpirada] = useState(false);
 
   useEffect(() => {
     return store.observarUsuarios((lista) => {
@@ -103,15 +138,75 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => store.observarConfiguracion(setConfiguracion), []);
 
-  // Recuperar la sesión anterior.
+  // Recuperar la sesión anterior (verificando que no haya expirado por inactividad de 1 hora).
   useEffect(() => {
-    const sesion = leerSesion();
+    const { sesion, expirada } = leerSesion();
     if (sesion?.usuarioId) {
       setUsuarioId(sesion.usuarioId);
       setPaso('dentro');
+      setSesionExpirada(false);
+    } else if (expirada) {
+      setSesionExpirada(true);
     }
     setCargando(false);
   }, []);
+
+  // Monitor de inactividad de 1 hora mientras el usuario está dentro de la app
+  useEffect(() => {
+    if (paso !== 'dentro' || !usuarioId) return;
+
+    let ultimaActualizacionLocal = Date.now();
+
+    function registrarActividad() {
+      const ahora = Date.now();
+      // Throttle a 15 segundos para no saturar llamadas a localStorage
+      if (ahora - ultimaActualizacionLocal > 15000) {
+        ultimaActualizacionLocal = ahora;
+        try {
+          const crudo = localStorage.getItem(LLAVE_SESION);
+          if (crudo) {
+            const ses = JSON.parse(crudo) as SesionGuardada;
+            if (ses && ses.usuarioId) {
+              ses.ultimaActividad = ahora;
+              localStorage.setItem(LLAVE_SESION, JSON.stringify(ses));
+            }
+          }
+        } catch {}
+      }
+    }
+
+    function verificarExpiracion() {
+      const { sesion, expirada } = leerSesion();
+      if (expirada || !sesion) {
+        setUsuarioId(null);
+        setPaso('clave');
+        guardarSesion(null);
+        setSesionExpirada(true);
+      }
+    }
+
+    const eventos = ['mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    eventos.forEach((ev) => window.addEventListener(ev, registrarActividad, { passive: true }));
+
+    // Chequeo periódico cada 30 segundos mientras la app esté abierta
+    const intervalo = setInterval(verificarExpiracion, 30000);
+
+    // Chequeo inmediato cuando la persona regresa al navegador o cambia a esta pestaña
+    function alEnfocar() {
+      if (document.visibilityState === 'visible') {
+        verificarExpiracion();
+      }
+    }
+    document.addEventListener('visibilitychange', alEnfocar);
+    window.addEventListener('focus', alEnfocar);
+
+    return () => {
+      eventos.forEach((ev) => window.removeEventListener(ev, registrarActividad));
+      clearInterval(intervalo);
+      document.removeEventListener('visibilitychange', alEnfocar);
+      window.removeEventListener('focus', alEnfocar);
+    };
+  }, [paso, usuarioId]);
 
   const usuario = useMemo(
     () => usuarios.find((u) => u.id === usuarioId) ?? null,
@@ -144,12 +239,15 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     sinInstalar: usuariosLeidos && usuarios.length === 0,
     primeraVez: usuariosLeidos && usuarios.length === 0,
     esApostol: usuario?.rol === 'apostol',
+    sesionExpirada,
+    limpiarSesionExpirada: () => setSesionExpirada(false),
 
     async inicializarApp(
       claveApostol: string,
       claveLideres: string,
       rolDestino: 'apostol' | 'lider',
     ) {
+      setSesionExpirada(false);
       const apostolClave = claveApostol.trim();
       const lideresClave = claveLideres.trim();
 
@@ -192,6 +290,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     },
 
     entrarComoApostol(clave: string): string {
+      setSesionExpirada(false);
       const c = normalizar(clave);
       if (!c) return 'Escribe la contraseña de Apóstol.';
 
@@ -223,6 +322,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     },
 
     entrarComoLider(clave: string): string {
+      setSesionExpirada(false);
       const c = normalizar(clave);
       if (!c) return 'Escribe la contraseña de Líderes.';
 
@@ -253,6 +353,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     },
 
     elegirQuienSoy(id: string) {
+      setSesionExpirada(false);
       setUsuarioId(id);
       setPaso('dentro');
       guardarSesion({ usuarioId: id, esApostol: false });

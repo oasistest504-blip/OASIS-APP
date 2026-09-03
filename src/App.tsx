@@ -18,6 +18,7 @@ import AjustesPrivados from './pages/AjustesPrivados';
 
 import { Cargando } from './components/UI';
 import { LogoOasis } from './components/LogoOasis';
+import { BannerInstalacionPWA, BotonInstalarPWA } from './components/BannerInstalacionPWA';
 import {
   IconoAjustes,
   IconoAtras,
@@ -55,6 +56,9 @@ export default function App() {
     if (usuario) {
       setVista(esApostol ? 'panel' : 'inicio');
       setHistorialVistas([]);
+      try {
+        localStorage.setItem('oasis_accion_completada', 'true');
+      } catch {}
     }
   }, [usuario?.id, esApostol]);
 
@@ -180,6 +184,8 @@ export default function App() {
           </div>
 
           <div className="fila" style={{ gap: 6, alignItems: 'center' }}>
+            <BotonInstalarPWA />
+
             <span className="pildora lider" style={{ fontSize: '0.8rem' }}>
               {usuario.nombre.split(' ')[0]} ({esApostol ? 'Apóstol' : 'Líder'})
             </span>
@@ -218,6 +224,7 @@ export default function App() {
 
       {/* Contenido principal */}
       <main className="principal max-ancho">
+        <BannerInstalacionPWA />
         {vista === 'panel' && <PanelApostol ir={ir} vencidas={totalVencidas} />}
         {vista === 'lideres' && <Lideres ir={ir} avisar={avisar} />}
         {vista === 'inicio' && <RegistrarPersona ir={ir} avisar={avisar} />}

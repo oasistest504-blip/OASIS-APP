@@ -12,6 +12,8 @@ export default function Login() {
     elegirQuienSoy,
     volverAClave,
     lideres,
+    sesionExpirada,
+    limpiarSesionExpirada,
   } = useAuth();
   const [claveApostol, setClaveApostol] = useState('');
   const [claveLider, setClaveLider] = useState('');
@@ -20,6 +22,7 @@ export default function Login() {
   function ingresarComoApostol(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setError('');
+    limpiarSesionExpirada();
     const claveAProbar = claveApostol.trim();
     if (!claveAProbar) {
       setError('Escribe la contraseña de Apóstol.');
@@ -36,6 +39,7 @@ export default function Login() {
   function ingresarComoLider(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setError('');
+    limpiarSesionExpirada();
     const claveAProbar = claveLider.trim();
     if (!claveAProbar) {
       setError('Escribe la contraseña de Líderes.');
@@ -59,10 +63,18 @@ export default function Login() {
         {paso === 'clave' ? (
           <>
             <h1 style={{ fontSize: '1.4rem', marginTop: 4 }}>Oasis Seguimiento</h1>
-            <p className="texto-medio" style={{ marginBottom: 20 }}>
+            <p className="texto-medio" style={{ marginBottom: 16 }}>
               Para que ninguna persona que llega a la iglesia se quede sin que alguien la
               busque.
             </p>
+
+            {sesionExpirada && (
+              <div style={{ marginBottom: 16, textAlign: 'left' }}>
+                <Aviso tipo="info" titulo="Sesión cerrada por inactividad">
+                  Por seguridad, la sesión se cierra automáticamente después de 1 hora sin actividad. Por favor ingresa tu contraseña nuevamente.
+                </Aviso>
+              </div>
+            )}
 
             {error && <Aviso tipo="peligro">{error}</Aviso>}
 

@@ -11,6 +11,7 @@ import {
   IconoEscudo,
   IconoWhatsApp,
 } from '../components/Iconos';
+import { GeneradorIconosPWA } from '../components/GeneradorIconosPWA';
 import type { Vista } from '../App';
 
 export default function AjustesPrivados({
@@ -167,6 +168,9 @@ export default function AjustesPrivados({
           </button>
         </div>
       </div>
+
+      {/* Descarga de App e Iconos PWA */}
+      <GeneradorIconosPWA />
 
       {/* Registro de Auditoría */}
       <div className="seccion">

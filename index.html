@@ -2,18 +2,31 @@
 <html lang="es-CO">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#1F4E70" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2B5B84" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Oasis Seg." />
     <meta name="description" content="App de seguimiento de personas del Centro de Alabanza Oasis. Los líderes registran personas nuevas, la app las acompaña por WhatsApp desde el número oficial de la iglesia, y el Apóstol ve en un solo panel quién espera oración, quién espera visita y qué líderes cumplieron." />
     <meta property="og:title" content="Oasis Seguimiento" />
     <meta property="og:description" content="App de seguimiento de personas del Centro de Alabanza Oasis. Los líderes registran personas nuevas, la app las acompaña por WhatsApp desde el número oficial de la iglesia, y el Apóstol ve en un solo panel quién espera oración, quién espera visita y qué líderes cumplieron." />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <link rel="apple-touch-icon" href="/logo.svg" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
     <title>Oasis Seguimiento</title>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function (error) {
+            console.warn('[PWA] Registro de Service Worker omitido:', error);
+          });
+        });
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

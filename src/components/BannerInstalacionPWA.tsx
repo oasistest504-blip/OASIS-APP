@@ -4,45 +4,44 @@ import { IconoDescargar } from './Iconos';
 import { Modal } from './UI';
 
 export function BannerInstalacionPWA() {
-  const { puedeInstalar, estaInstalada, esIOS, instalar } = usePWAInstall();
+  const { puedeInstalar, estaInstalada, esIOS, esAndroid, instalar } = usePWAInstall();
   const [descartado, setDescartado] = useState(false);
-  const [accionCompletada, setAccionCompletada] = useState(false);
   const [guiaIOSAbierta, setGuiaIOSAbierta] = useState(false);
+  const [guiaAndroidAbierta, setGuiaAndroidAbierta] = useState(false);
 
   useEffect(() => {
     try {
-      const fueDescartado = localStorage.getItem('oasis_banner_instalacion_descartado') === 'true';
-      const completoAccion = localStorage.getItem('oasis_accion_completada') === 'true';
+      const fueDescartado = sessionStorage.getItem('oasis_banner_instalacion_descartado') === 'true';
       setDescartado(fueDescartado);
-      setAccionCompletada(completoAccion);
     } catch {}
   }, []);
 
-  // Si la app ya está corriendo instalada, no mostramos el banner
+  // Si la app ya está corriendo instalada (standalone), no mostramos el banner
   if (estaInstalada) {
     return null;
   }
 
-  // Regla PWA: No mostrar en la primera visita inmediata sin acción previa, a menos que el usuario interactúe
-  // Solo se muestra si hubo alguna acción o si el usuario puede instalarlo y no lo ha descartado
-  const deberiaMostrarBanner = (puedeInstalar || esIOS) && !descartado && accionCompletada;
+  // Se muestra de inmediato si no está instalada y no ha sido descartada en esta sesión
+  const deberiaMostrarBanner = !descartado;
 
   function descartar() {
     setDescartado(true);
     try {
-      localStorage.setItem('oasis_banner_instalacion_descartado', 'true');
+      sessionStorage.setItem('oasis_banner_instalacion_descartado', 'true');
     } catch {}
   }
 
-  function handleInstalarClick() {
-    if (esIOS && !puedeInstalar) {
+  async function handleInstalarClick() {
+    if (puedeInstalar) {
+      const exito = await instalar();
+      if (exito) return;
+    }
+
+    // Si el navegador no permite disparo directo (Safari iOS o Chrome sin evento directo)
+    if (esIOS) {
       setGuiaIOSAbierta(true);
     } else {
-      instalar().then((exito) => {
-        if (!exito && esIOS) {
-          setGuiaIOSAbierta(true);
-        }
-      });
+      setGuiaAndroidAbierta(true);
     }
   }
 
@@ -54,12 +53,12 @@ export function BannerInstalacionPWA() {
           aria-label="Instalación de la aplicación"
           className="tarjeta"
           style={{
-            margin: '12px 0 16px',
+            margin: '10px 0 16px',
             background: 'linear-gradient(135deg, #1F4E70 0%, #2B5B84 100%)',
             color: '#FFFFFF',
             border: 'none',
             borderRadius: 14,
-            padding: '14px 16px',
+            padding: '12px 16px',
             boxShadow: '0 4px 14px rgba(31, 78, 112, 0.25)',
           }}
         >
@@ -71,11 +70,11 @@ export function BannerInstalacionPWA() {
               gap: 12,
             }}
           >
-            <div className="fila" style={{ gap: 12, alignItems: 'center', flex: '1 1 240px' }}>
+            <div className="fila" style={{ gap: 12, alignItems: 'center', flex: '1 1 220px' }}>
               <div
                 style={{
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   borderRadius: 10,
                   background: 'rgba(255, 255, 255, 0.15)',
                   display: 'flex',
@@ -87,20 +86,20 @@ export function BannerInstalacionPWA() {
                 <img
                   src="/logo.svg"
                   alt="Oasis"
-                  style={{ width: 28, height: 28, objectFit: 'contain' }}
+                  style={{ width: 26, height: 26, objectFit: 'contain' }}
                 />
               </div>
               <div>
-                <strong style={{ display: 'block', fontSize: '0.95rem', color: '#FFFFFF' }}>
-                  Instalar Oasis Seguimiento
+                <strong style={{ display: 'block', fontSize: '0.95rem', color: '#FFFFFF', lineHeight: 1.2 }}>
+                  Instalar Oasis en tu celular
                 </strong>
                 <span style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.85)' }}>
-                  Acceso rápido en tu pantalla de inicio como una aplicación nativa.
+                  Agrégala a tu pantalla de inicio como una aplicación nativa.
                 </span>
               </div>
             </div>
 
-            <div className="fila" style={{ gap: 8, flexShrink: 0 }}>
+            <div className="fila" style={{ gap: 8, flexShrink: 0, alignItems: 'center' }}>
               <button
                 type="button"
                 className="btn chico"
@@ -108,11 +107,12 @@ export function BannerInstalacionPWA() {
                 style={{
                   background: '#FFFFFF',
                   color: '#1F4E70',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                 }}
               >
                 <IconoDescargar size={16} />
@@ -143,7 +143,7 @@ export function BannerInstalacionPWA() {
       >
         <div className="pila" style={{ gap: 14 }}>
           <p className="texto-medio" style={{ margin: 0 }}>
-            En iOS (Safari), sigue estos 3 sencillos pasos para tener la app en tu pantalla de inicio:
+            En iOS (Safari), sigue estos 3 sencillos pasos para instalarla en tu celular:
           </p>
 
           <ol
@@ -158,12 +158,10 @@ export function BannerInstalacionPWA() {
             }}
           >
             <li>
-              Toca el botón <strong>Compartir</strong> en la barra inferior de Safari (el ícono de
-              un cuadro con flecha hacia arriba <strong>⎋</strong>).
+              Toca el botón <strong>Compartir</strong> en la barra inferior de Safari (el ícono del cuadro con flecha hacia arriba <strong>⎋</strong>).
             </li>
             <li>
-              Desplázate hacia abajo en el menú y selecciona{' '}
-              <strong>"Añadir a pantalla de inicio"</strong>.
+              Desplázate hacia abajo y selecciona <strong>"Añadir a pantalla de inicio"</strong>.
             </li>
             <li>
               Toca <strong>"Añadir"</strong> en la esquina superior derecha para finalizar.
@@ -180,6 +178,54 @@ export function BannerInstalacionPWA() {
           </button>
         </div>
       </Modal>
+
+      {/* Modal explicativo para dispositivos Android / Chrome */}
+      <Modal
+        abierto={guiaAndroidAbierta}
+        onCerrar={() => setGuiaAndroidAbierta(false)}
+        titulo="Instalar en tu celular Android"
+      >
+        <div className="pila" style={{ gap: 14 }}>
+          <p className="texto-medio" style={{ margin: 0 }}>
+            Para tener Oasis Seguimiento como app en tu pantalla de inicio:
+          </p>
+
+          <ol
+            style={{
+              paddingLeft: 20,
+              margin: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              fontSize: '0.9rem',
+              color: 'var(--tinta-1, #1e293b)',
+            }}
+          >
+            <li>
+              Toca los <strong>tres puntos (⋮)</strong> en la esquina superior derecha de tu navegador Chrome.
+            </li>
+            <li>
+              Selecciona <strong>"Instalar aplicación"</strong> o <strong>"Agregar a la pantalla principal"</strong>.
+            </li>
+            <li>
+              Confirma tocando <strong>"Instalar"</strong>.
+            </li>
+          </ol>
+
+          <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
+            Una vez instalada, la app abrirá a pantalla completa sin barra de navegación.
+          </p>
+
+          <button
+            type="button"
+            className="btn primario"
+            onClick={() => setGuiaAndroidAbierta(false)}
+            style={{ width: '100%', marginTop: 6 }}
+          >
+            Entendido
+          </button>
+        </div>
+      </Modal>
     </>
   );
 }
@@ -190,16 +236,19 @@ export function BannerInstalacionPWA() {
 export function BotonInstalarPWA() {
   const { puedeInstalar, estaInstalada, esIOS, instalar } = usePWAInstall();
   const [guiaIOSAbierta, setGuiaIOSAbierta] = useState(false);
+  const [guiaAndroidAbierta, setGuiaAndroidAbierta] = useState(false);
 
   if (estaInstalada) return null;
 
-  function handleClick() {
-    if (esIOS && !puedeInstalar) {
+  async function handleClick() {
+    if (puedeInstalar) {
+      const exito = await instalar();
+      if (exito) return;
+    }
+    if (esIOS) {
       setGuiaIOSAbierta(true);
     } else {
-      instalar().then((exito) => {
-        if (!exito && esIOS) setGuiaIOSAbierta(true);
-      });
+      setGuiaAndroidAbierta(true);
     }
   }
 
@@ -244,8 +293,7 @@ export function BotonInstalarPWA() {
             }}
           >
             <li>
-              Toca el botón <strong>Compartir</strong> en la barra de Safari (el ícono del cuadro con
-              flecha hacia arriba <strong>⎋</strong>).
+              Toca el botón <strong>Compartir</strong> en la barra de Safari (ícono del cuadro con flecha hacia arriba <strong>⎋</strong>).
             </li>
             <li>
               Baja en las opciones y presiona <strong>"Añadir a pantalla de inicio"</strong>.
@@ -258,6 +306,47 @@ export function BotonInstalarPWA() {
             type="button"
             className="btn primario"
             onClick={() => setGuiaIOSAbierta(false)}
+            style={{ width: '100%', marginTop: 6 }}
+          >
+            Entendido
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        abierto={guiaAndroidAbierta}
+        onCerrar={() => setGuiaAndroidAbierta(false)}
+        titulo="Instalar en tu celular Android"
+      >
+        <div className="pila" style={{ gap: 14 }}>
+          <p className="texto-medio" style={{ margin: 0 }}>
+            Para instalar la app en tu celular:
+          </p>
+          <ol
+            style={{
+              paddingLeft: 20,
+              margin: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              fontSize: '0.9rem',
+              color: 'var(--tinta-1, #1e293b)',
+            }}
+          >
+            <li>
+              Toca los <strong>tres puntos (⋮)</strong> arriba a la derecha en Chrome.
+            </li>
+            <li>
+              Selecciona <strong>"Instalar aplicación"</strong> o <strong>"Agregar a la pantalla principal"</strong>.
+            </li>
+            <li>
+              Confirma tocando <strong>"Instalar"</strong>.
+            </li>
+          </ol>
+          <button
+            type="button"
+            className="btn primario"
+            onClick={() => setGuiaAndroidAbierta(false)}
             style={{ width: '100%', marginTop: 6 }}
           >
             Entendido

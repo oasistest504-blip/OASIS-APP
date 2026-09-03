@@ -9,20 +9,28 @@ export function usePWAInstall() {
   const [eventoPrompt, setEventoPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [estaInstalada, setEstaInstalada] = useState(false);
   const [esIOS, setEsIOS] = useState(false);
+  const [esAndroid, setEsAndroid] = useState(false);
+  const [esMovil, setEsMovil] = useState(false);
 
   useEffect(() => {
     // 1. Detectar si la app ya está ejecutándose como PWA instalada
     const enStandalone =
       typeof window !== 'undefined' &&
       (window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as unknown as { standalone?: boolean }).standalone === true);
+        (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+        document.referrer.includes('android-app://'));
     setEstaInstalada(enStandalone);
 
-    // 2. Detectar dispositivos Apple iOS (iPhone / iPad / iPod)
+    // 2. Detectar dispositivos móviles (Android / iOS)
     if (typeof window !== 'undefined') {
       const agente = window.navigator.userAgent.toLowerCase();
-      const esDispositivoApple = /iphone|ipad|ipod/.test(agente);
-      setEsIOS(esDispositivoApple);
+      const esApple = /iphone|ipad|ipod/.test(agente);
+      const esAndr = /android/.test(agente);
+      const esDispositivoMovil = esApple || esAndr || /mobile|tablet/.test(agente);
+
+      setEsIOS(esApple);
+      setEsAndroid(esAndr);
+      setEsMovil(esDispositivoMovil);
     }
 
     // 3. Escuchar el evento oficial del navegador para instalar
@@ -69,6 +77,8 @@ export function usePWAInstall() {
     puedeInstalar: !!eventoPrompt,
     estaInstalada,
     esIOS,
+    esAndroid,
+    esMovil,
     instalar,
   };
 }

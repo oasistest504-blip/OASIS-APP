@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Aviso, CampoClave, Inicial } from '../components/UI';
 import { IconoAtras } from '../components/Iconos';
 import { LogoOasis } from '../components/LogoOasis';
+import { BannerInstalacionPWA } from '../components/BannerInstalacionPWA';
 
 export default function Login() {
   const {
@@ -56,6 +57,8 @@ export default function Login() {
   return (
     <div className="pantalla-entrada">
       <div className="caja-entrada" style={{ maxWidth: 460 }}>
+        <BannerInstalacionPWA />
+
         <div className="placa-entrada" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 14 }}>
           <LogoOasis tamano={72} conTexto={true} />
         </div>

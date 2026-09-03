@@ -3,7 +3,7 @@
 // =====================================================================
 // REQUISITO CRÍTICO: La constante VERSION define el ciclo de vida de la caché.
 // Cada vez que se modifique este archivo o los recursos estáticos, sube el número.
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 const CACHE_NAME = 'oasis-cache-v' + VERSION;
 
 // Recursos base indispensables para funcionamiento inicial y offline

@@ -1,6 +1,6 @@
 export function LogoOasis({
   tamano = 80,
-  conTexto = true,
+  conTexto = false,
   className = '',
 }: {
   tamano?: number;

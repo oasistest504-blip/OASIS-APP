@@ -29,13 +29,15 @@
   padding: 0;
 }
 
-body {
+html, body {
   background-color: var(--fondo);
   color: var(--tinta);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 /* ---------------- Layout & App Structure ---------------- */
@@ -46,6 +48,8 @@ body {
   flex-direction: column;
   background-color: var(--fondo);
   padding-bottom: 70px;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 .max-ancho {

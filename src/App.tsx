@@ -174,9 +174,9 @@ export default function App() {
 
             <div
               onClick={() => ir(esApostol ? 'panel' : 'inicio')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
             >
-              <LogoOasis tamano={32} />
+              <LogoOasis tamano={28} conTexto={false} />
               <span className="logo-pastoral" style={{ margin: 0 }}>
                 OASIS
               </span>
@@ -195,12 +195,12 @@ export default function App() {
                 fontSize: '0.78rem',
                 padding: '3px 8px',
                 whiteSpace: 'nowrap',
-                maxWidth: '120px',
+                maxWidth: '100px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}
             >
-              {usuario.nombre.split(' ')[0]} ({esApostol ? 'Apóstol' : 'Líder'})
+              {esApostol ? 'Apóstol' : usuario.nombre.split(' ')[0]}
             </span>
 
             {esApostol && (
@@ -214,7 +214,9 @@ export default function App() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '6px 8px',
+                  width: 34,
+                  height: 34,
+                  padding: 0,
                   borderRadius: '8px',
                   flexShrink: 0,
                 }}
@@ -225,7 +227,6 @@ export default function App() {
 
             <button
               type="button"
-              className="btn fantasma chico"
               onClick={salir}
               title="Cerrar sesión"
               aria-label="Cerrar sesión"
@@ -233,14 +234,16 @@ export default function App() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '6px 8px',
-                borderRadius: '8px',
-                color: '#dc2626',
-                background: 'rgba(239, 68, 68, 0.08)',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
+                width: 36,
+                height: 36,
+                padding: 0,
+                borderRadius: '9px',
+                color: '#b91c1c',
+                background: '#fee2e2',
+                border: '1px solid #fecaca',
                 flexShrink: 0,
-                marginRight: '2px',
                 cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
               }}
             >
               <IconoSalir size={18} />

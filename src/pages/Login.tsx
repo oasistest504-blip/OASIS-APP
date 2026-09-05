@@ -16,6 +16,7 @@ export default function Login() {
     sesionExpirada,
     limpiarSesionExpirada,
   } = useAuth();
+  const [rolSeleccionado, setRolSeleccionado] = useState<'apostol' | 'lider'>('apostol');
   const [claveApostol, setClaveApostol] = useState('');
   const [claveLider, setClaveLider] = useState('');
   const [error, setError] = useState('');
@@ -79,57 +80,143 @@ export default function Login() {
               </div>
             )}
 
+            {/* Selector claro de Rol para evitar confusiones en celular */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 6,
+                padding: 4,
+                background: 'rgba(43, 91, 132, 0.08)',
+                borderRadius: 10,
+                marginBottom: 16,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setRolSeleccionado('apostol');
+                  setError('');
+                }}
+                style={{
+                  padding: '10px 8px',
+                  borderRadius: 8,
+                  fontWeight: rolSeleccionado === 'apostol' ? 700 : 500,
+                  fontSize: '0.9rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: rolSeleccionado === 'apostol' ? '#FFFFFF' : 'transparent',
+                  color: rolSeleccionado === 'apostol' ? 'var(--azul-profundo, #1F4E70)' : 'var(--tinta-2, #64748b)',
+                  boxShadow: rolSeleccionado === 'apostol' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <span>👤</span> Soy el Apóstol
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setRolSeleccionado('lider');
+                  setError('');
+                }}
+                style={{
+                  padding: '10px 8px',
+                  borderRadius: 8,
+                  fontWeight: rolSeleccionado === 'lider' ? 700 : 500,
+                  fontSize: '0.9rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: rolSeleccionado === 'lider' ? '#FFFFFF' : 'transparent',
+                  color: rolSeleccionado === 'lider' ? 'var(--azul-profundo, #1F4E70)' : 'var(--tinta-2, #64748b)',
+                  boxShadow: rolSeleccionado === 'lider' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <span>👥</span> Soy un Líder
+              </button>
+            </div>
+
             {error && <Aviso tipo="peligro">{error}</Aviso>}
 
             <div className="pila" style={{ textAlign: 'left', gap: 16 }}>
-              {/* Acceso Apóstol */}
-              <div className="tarjeta" style={{ padding: '16px', borderColor: 'var(--azul-borde)' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--azul-profundo)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>👤</span> Acceso del Apóstol
-                </div>
-                <form onSubmit={ingresarComoApostol}>
-                  <CampoClave
-                    etiqueta="Contraseña de Apóstol"
-                    valor={claveApostol}
-                    onChange={setClaveApostol}
-                    autoComplete="current-password"
-                    placeholder="Contraseña"
-                  />
-                  <div style={{ marginTop: 10 }}>
-                    <button className="btn ancho" type="submit">
-                      Entrar como Apóstol
-                    </button>
+              {rolSeleccionado === 'apostol' ? (
+                /* Formulario del Apóstol */
+                <div className="tarjeta" style={{ padding: '18px', borderColor: 'var(--azul-borde)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--azul-profundo)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>👤</span> Acceso del Apóstol
                   </div>
-                </form>
-              </div>
-
-              {/* Acceso Líderes */}
-              <div className="tarjeta" style={{ padding: '16px' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--tinta)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>👥</span> Acceso de los Líderes
+                  <p style={{ fontSize: '0.82rem', color: 'var(--tinta-2, #64748b)', margin: '0 0 12px 0' }}>
+                    Panel general, métricas de seguimiento y administración de líderes.
+                  </p>
+                  <form onSubmit={ingresarComoApostol}>
+                    <CampoClave
+                      etiqueta="Contraseña de Apóstol"
+                      valor={claveApostol}
+                      onChange={setClaveApostol}
+                      autoComplete="current-password"
+                      placeholder="Contraseña del Apóstol"
+                    />
+                    <div style={{ marginTop: 14 }}>
+                      <button className="btn ancho" type="submit">
+                        Entrar al Panel General
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                <form onSubmit={ingresarComoLider}>
-                  <CampoClave
-                    etiqueta="Contraseña de Líderes"
-                    valor={claveLider}
-                    onChange={setClaveLider}
-                    autoComplete="current-password"
-                    placeholder="Contraseña"
-                  />
-                  <div style={{ marginTop: 10 }}>
-                    <button className="btn secundario ancho" type="submit">
-                      Entrar como Líder
-                    </button>
+              ) : (
+                /* Formulario de Líderes */
+                <div className="tarjeta" style={{ padding: '18px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--tinta)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>👥</span> Acceso de los Líderes
                   </div>
-                </form>
-              </div>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--tinta-2, #64748b)', margin: '0 0 12px 0' }}>
+                    Registro de nuevas personas y tareas pastorales asignadas.
+                  </p>
+                  <form onSubmit={ingresarComoLider}>
+                    <CampoClave
+                      etiqueta="Contraseña de Líderes"
+                      valor={claveLider}
+                      onChange={setClaveLider}
+                      autoComplete="current-password"
+                      placeholder="Contraseña del equipo"
+                    />
+                    <div style={{ marginTop: 14 }}>
+                      <button className="btn secundario ancho" type="submit">
+                        Continuar como Líder
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           </>
         ) : (
           <>
-            <div style={{ display: 'flex', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <button className="btn fantasma chico" onClick={volverAClave}>
                 <IconoAtras /> Volver
+              </button>
+
+              {/* Botón rápido por si el apóstol cayó aquí por accidente */}
+              <button
+                type="button"
+                className="btn fantasma chico"
+                style={{ fontSize: '0.8rem', color: 'var(--azul-profundo)' }}
+                onClick={() => {
+                  volverAClave();
+                  setRolSeleccionado('apostol');
+                }}
+              >
+                ¿Eres el Apóstol? Entra aquí
               </button>
             </div>
 
@@ -144,6 +231,16 @@ export default function Login() {
                 <Aviso tipo="alerta" titulo="No hay líderes registrados">
                   Aún no se han registrado líderes en el sistema. El Apóstol debe agregarlos desde el panel de administración.
                 </Aviso>
+                <button
+                  type="button"
+                  className="btn primario"
+                  onClick={() => {
+                    volverAClave();
+                    setRolSeleccionado('apostol');
+                  }}
+                >
+                  Entrar como Apóstol para agregar líderes
+                </button>
               </div>
             ) : (
               <div className="pila">

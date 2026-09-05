@@ -208,20 +208,28 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     };
   }, [paso, usuarioId]);
 
-  const usuario = useMemo(
-    () => usuarios.find((u) => u.id === usuarioId) ?? null,
-    [usuarios, usuarioId],
-  );
+  const usuario = useMemo(() => {
+    if (!usuarioId) return null;
+    const encontrado = usuarios.find((u) => u.id === usuarioId);
+    if (encontrado) return encontrado;
+    // Si la sesión guardada es de Apóstol, vincular automáticamente con el apóstol existente
+    const { sesion } = leerSesion();
+    if (sesion?.esApostol) {
+      const apostol = usuarios.find((u) => u.rol === 'apostol' && u.activo) || usuarios.find((u) => u.rol === 'apostol');
+      if (apostol) return apostol;
+    }
+    return null;
+  }, [usuarios, usuarioId]);
 
   // Si el Apóstol elimina a un líder mientras está adentro, se le cierra
-  // la sesión sola en su próximo movimiento.
+  // la sesión sola en su próximo movimiento (solo si los usuarios ya terminaron de cargar).
   useEffect(() => {
-    if (paso === 'dentro' && usuarioId && usuarios.length > 0 && !usuario) {
+    if (paso === 'dentro' && usuarioId && usuariosLeidos && usuarios.length > 0 && !usuario) {
       setUsuarioId(null);
       setPaso('clave');
       guardarSesion(null);
     }
-  }, [paso, usuarioId, usuarios, usuario]);
+  }, [paso, usuarioId, usuariosLeidos, usuarios.length, usuario]);
 
   const lideres = useMemo(
     () => usuarios.filter((u) => u.rol === 'lider' && u.activo),
@@ -234,7 +242,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     lideres,
     configuracion,
     config: configuracion,
-    cargando,
+    cargando: cargando || (!!usuarioId && !usuariosLeidos),
     paso,
     sinInstalar: usuariosLeidos && usuarios.length === 0,
     primeraVez: usuariosLeidos && usuarios.length === 0,
@@ -295,26 +303,34 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       if (!c) return 'Escribe la contraseña de Apóstol.';
 
       if (c === normalizar(configuracion.claveApostol)) {
-        const apostol = usuarios.find((u) => u.rol === 'apostol');
-        if (!apostol) {
-          store
-            .crearUsuario({
-              nombre: 'Apóstol',
-              rol: 'apostol',
-              activo: true,
-              capacidadSemanal: 10,
-              creadoEn: new Date().toISOString(),
-            })
-            .then((id) => {
-              setUsuarioId(id);
-              setPaso('dentro');
-              guardarSesion({ usuarioId: id, esApostol: true });
-            });
+        const apostol =
+          usuarios.find((u) => u.rol === 'apostol' && u.activo) ||
+          usuarios.find((u) => u.rol === 'apostol');
+        if (apostol) {
+          setUsuarioId(apostol.id);
+          setPaso('dentro');
+          guardarSesion({ usuarioId: apostol.id, esApostol: true });
           return '';
         }
-        setUsuarioId(apostol.id);
-        setPaso('dentro');
-        guardarSesion({ usuarioId: apostol.id, esApostol: true });
+        store
+          .crearUsuario({
+            nombre: 'Apóstol',
+            rol: 'apostol',
+            activo: true,
+            capacidadSemanal: 10,
+            creadoEn: new Date().toISOString(),
+          })
+          .then((id) => {
+            setUsuarioId(id);
+            setPaso('dentro');
+            guardarSesion({ usuarioId: id, esApostol: true });
+          });
+        return '';
+      }
+
+      // Si por error escribió la clave de líderes en la casilla del Apóstol:
+      if (c === normalizar(configuracion.claveLideres)) {
+        setPaso('elegirNombre');
         return '';
       }
 
@@ -325,6 +341,11 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       setSesionExpirada(false);
       const c = normalizar(clave);
       if (!c) return 'Escribe la contraseña de Líderes.';
+
+      // Si por error escribió la clave del Apóstol en la casilla de líderes:
+      if (c === normalizar(configuracion.claveApostol)) {
+        return valor.entrarComoApostol(clave);
+      }
 
       if (c === normalizar(configuracion.claveLideres)) {
         setPaso('elegirNombre');

@@ -147,7 +147,7 @@ export default function App() {
       {/* Barra de cabecera */}
       <header className="cabecera">
         <div className="fila-entre max-ancho">
-          <div className="fila" style={{ gap: 8, alignItems: 'center' }}>
+          <div className="fila" style={{ gap: 8, alignItems: 'center', minWidth: 0 }}>
             {mostrarBotonAtras && (
               <button
                 type="button"
@@ -162,6 +162,9 @@ export default function App() {
                   gap: 4,
                   fontWeight: 600,
                   fontSize: '0.85rem',
+                  flexShrink: 0,
+                  borderRadius: '8px',
+                  background: 'rgba(0, 0, 0, 0.04)',
                 }}
               >
                 <IconoAtras size={18} />
@@ -171,22 +174,32 @@ export default function App() {
 
             <div
               onClick={() => ir(esApostol ? 'panel' : 'inicio')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
             >
               <LogoOasis tamano={32} />
               <span className="logo-pastoral" style={{ margin: 0 }}>
                 OASIS
               </span>
             </div>
-            <span className="texto-chico" style={{ fontWeight: 600 }}>
+            <span className="texto-chico nombre-iglesia-cabecera" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
               {config?.nombreIglesia || 'Centro de Alabanza Oasis'}
             </span>
           </div>
 
-          <div className="fila" style={{ gap: 6, alignItems: 'center' }}>
+          <div className="fila" style={{ gap: 6, alignItems: 'center', flexShrink: 0, marginLeft: 'auto' }}>
             <BotonInstalarPWA />
 
-            <span className="pildora lider" style={{ fontSize: '0.8rem' }}>
+            <span
+              className="pildora lider"
+              style={{
+                fontSize: '0.78rem',
+                padding: '3px 8px',
+                whiteSpace: 'nowrap',
+                maxWidth: '120px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
               {usuario.nombre.split(' ')[0]} ({esApostol ? 'Apóstol' : 'Líder'})
             </span>
 
@@ -197,6 +210,14 @@ export default function App() {
                 onClick={() => ir('privado')}
                 title="Ajustes y contraseñas"
                 aria-label="Ajustes y contraseñas"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '6px 8px',
+                  borderRadius: '8px',
+                  flexShrink: 0,
+                }}
               >
                 <IconoAjustes size={18} />
               </button>
@@ -208,6 +229,19 @@ export default function App() {
               onClick={salir}
               title="Cerrar sesión"
               aria-label="Cerrar sesión"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '6px 8px',
+                borderRadius: '8px',
+                color: '#dc2626',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                flexShrink: 0,
+                marginRight: '2px',
+                cursor: 'pointer',
+              }}
             >
               <IconoSalir size={18} />
             </button>

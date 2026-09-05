@@ -262,14 +262,15 @@ export function BotonInstalarPWA() {
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 5,
+          gap: 4,
           color: 'var(--color-primario, #2B5B84)',
           fontWeight: 600,
-          padding: '5px 9px',
+          padding: '5px 8px',
+          flexShrink: 0,
         }}
       >
         <IconoDescargar size={16} />
-        <span>Instalar</span>
+        <span className="texto-instalar-btn">Instalar</span>
       </button>
 
       <Modal

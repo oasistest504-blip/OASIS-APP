@@ -146,8 +146,8 @@ export default function App() {
     <div className="app-envoltura">
       {/* Barra de cabecera */}
       <header className="cabecera">
-        <div className="fila-entre max-ancho">
-          <div className="fila" style={{ gap: 8, alignItems: 'center', minWidth: 0 }}>
+        <div className="cabecera-fila max-ancho">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexShrink: 1 }}>
             {mostrarBotonAtras && (
               <button
                 type="button"
@@ -156,28 +156,28 @@ export default function App() {
                 title="Volver a la sección anterior"
                 aria-label="Volver atrás"
                 style={{
-                  padding: '6px 8px',
-                  display: 'flex',
+                  padding: '5px 8px',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 4,
+                  gap: 3,
                   fontWeight: 600,
-                  fontSize: '0.85rem',
+                  fontSize: '0.82rem',
                   flexShrink: 0,
                   borderRadius: '8px',
                   background: 'rgba(0, 0, 0, 0.04)',
                 }}
               >
-                <IconoAtras size={18} />
-                <span>Atrás</span>
+                <IconoAtras size={16} />
+                <span className="texto-atras-btn">Atrás</span>
               </button>
             )}
 
             <div
               onClick={() => ir(esApostol ? 'panel' : 'inicio')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}
             >
-              <LogoOasis tamano={28} conTexto={false} />
-              <span className="logo-pastoral" style={{ margin: 0 }}>
+              <LogoOasis tamano={26} conTexto={false} />
+              <span className="logo-pastoral" style={{ margin: 0, padding: '3px 7px', fontSize: '0.72rem' }}>
                 OASIS
               </span>
             </div>
@@ -186,18 +186,19 @@ export default function App() {
             </span>
           </div>
 
-          <div className="fila" style={{ gap: 6, alignItems: 'center', flexShrink: 0, marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginLeft: 'auto' }}>
             <BotonInstalarPWA />
 
             <span
               className="pildora lider"
               style={{
-                fontSize: '0.78rem',
-                padding: '3px 8px',
+                fontSize: '0.75rem',
+                padding: '3px 7px',
                 whiteSpace: 'nowrap',
-                maxWidth: '100px',
+                maxWidth: '90px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
+                lineHeight: 1.2,
               }}
             >
               {esApostol ? 'Apóstol' : usuario.nombre.split(' ')[0]}
@@ -214,14 +215,15 @@ export default function App() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 34,
-                  height: 34,
+                  width: 32,
+                  height: 32,
                   padding: 0,
                   borderRadius: '8px',
                   flexShrink: 0,
+                  background: 'rgba(0, 0, 0, 0.03)',
                 }}
               >
-                <IconoAjustes size={18} />
+                <IconoAjustes size={17} />
               </button>
             )}
 
@@ -234,19 +236,18 @@ export default function App() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 padding: 0,
-                borderRadius: '9px',
+                borderRadius: '8px',
                 color: '#b91c1c',
                 background: '#fee2e2',
                 border: '1px solid #fecaca',
                 flexShrink: 0,
                 cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
               }}
             >
-              <IconoSalir size={18} />
+              <IconoSalir size={17} />
             </button>
           </div>
         </div>

@@ -3,6 +3,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
+    { "source": "/api/ping", "destination": "/api/agente?r=ping" },
     { "source": "/webhook/whatsapp", "destination": "/api/agente?r=webhook" },
     { "source": "/api/salud", "destination": "/api/agente?r=salud" },
     { "source": "/api/whatsapp/estado", "destination": "/api/agente?r=estado" },

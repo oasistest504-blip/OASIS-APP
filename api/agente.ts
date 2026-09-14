@@ -1,10 +1,3 @@
-import * as PIEZA_WEBHOOK from '../server/webhook.js';
-import * as PIEZA_WHATSAPP from '../server/whatsapp.js';
-import * as PIEZA_SECUENCIA from '../server/secuencia.js';
-import * as PIEZA_FIREBASE from '../server/firebaseAdmin.js';
-import * as PIEZA_CONFIG from '../server/config.js';
-import * as PIEZA_PLANTILLAS from '../src/lib/plantillas.js';
-
 // El agente de Oasis en Vercel. Un solo archivo atiende todas las rutas.
 // Cual de ellas se decide con el parametro r, que asigna vercel.json.
 // La logica de verdad sigue viviendo en la carpeta server/.
@@ -21,14 +14,20 @@ import { db, HAY_DB } from '../server/firebaseAdmin';
 import { config as ajustes, WHATSAPP_SIMULADO, HAY_GEMINI } from '../server/config';
 import { PLANTILLAS } from '../src/lib/plantillas';
 
+const cargadas: Record<string, any> = {};
+
 async function pieza(nombre: string): Promise<any> {
-  if (nombre === 'webhook') return PIEZA_WEBHOOK;
-  if (nombre === 'whatsapp') return PIEZA_WHATSAPP;
-  if (nombre === 'secuencia') return PIEZA_SECUENCIA;
-  if (nombre === 'firebase') return PIEZA_FIREBASE;
-  if (nombre === 'config') return PIEZA_CONFIG;
-  if (nombre === 'plantillas') return PIEZA_PLANTILLAS;
-  throw new Error('Pieza desconocida: ' + nombre);
+  if (cargadas[nombre]) return cargadas[nombre];
+  let m: any;
+  if (nombre === 'webhook') m = await import('../server/webhook.js');
+  else if (nombre === 'whatsapp') m = await import('../server/whatsapp.js');
+  else if (nombre === 'secuencia') m = await import('../server/secuencia.js');
+  else if (nombre === 'firebase') m = await import('../server/firebaseAdmin.js');
+  else if (nombre === 'config') m = await import('../server/config.js');
+  else if (nombre === 'plantillas') m = await import('../src/lib/plantillas.js');
+  else throw new Error('Pieza desconocida: ' + nombre);
+  cargadas[nombre] = m;
+  return m;
 }
 
 function json(obj: unknown, codigo = 200): Response {

@@ -12,7 +12,7 @@
 //  autorización, ni a quien ya lleva tres mensajes sin responder.
 // =====================================================================
 
-import { db } from './firebaseAdmin.js';
+import { db, guardarInteraccion, crearTarea } from './firebaseAdmin.js';
 import { enviarPlantilla } from './whatsapp.js';
 import { config } from './config.js';
 import { SECUENCIA, PLANTILLAS } from '../src/lib/plantillas.js';
@@ -21,6 +21,12 @@ const MAXIMO_SIN_RESPUESTA = 3;
 
 function diasDesde(iso: string): number {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+
+function enDias(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString();
 }
 
 export async function correrSecuencia(): Promise<{
@@ -78,15 +84,15 @@ export async function correrSecuencia(): Promise<{
         ? [primerNombre(p.nombre), proximoDomingo()]
         : [primerNombre(p.nombre)];
 
+    const textoMensaje = plantilla.vistaPrevia
+      .replace('{{1}}', variables[0] ?? '')
+      .replace('{{2}}', variables[1] ?? '');
+
     const resultado = await enviarPlantilla({
-      personaId: p.id,
       telefono: p.telefonoE164,
       plantilla: plantilla.nombre,
       idioma: plantilla.idioma,
       variables,
-      textoParaHistorial: plantilla.vistaPrevia
-        .replace('{{1}}', variables[0] ?? '')
-        .replace('{{2}}', variables[1] ?? ''),
     });
 
     tocadosHoy++;
@@ -98,6 +104,16 @@ export async function correrSecuencia(): Promise<{
 
     enviados++;
     detalle.push(`${p.nombre} → ${plantilla.nombre}`);
+
+    await guardarInteraccion({
+      personaId: p.id,
+      direccion: 'saliente',
+      canal: 'whatsapp',
+      plantilla: plantilla.nombre,
+      texto: textoMensaje,
+      estado: resultado.estado,
+      ...(resultado.mensajeId ? { mensajeIdMeta: resultado.mensajeId } : {}),
+    });
 
     const cambios: Record<string, any> = {
       pasosEnviados: [...yaEnviados, paso.clave],
@@ -115,6 +131,45 @@ export async function correrSecuencia(): Promise<{
         banderas.add('Sin respuesta');
         cambios.banderas = Array.from(banderas);
         detalle.push(`${p.nombre}: tres mensajes sin respuesta, se deja de insistir.`);
+
+        if (!p.liderAsignadoId) {
+          detalle.push(`${p.nombre} se quedó sin respuesta y sin líder que la busque.`);
+        } else {
+          const yaHayTarea = await db
+            .collection('tareas')
+            .where('personaId', '==', p.id)
+            .where('tipo', '==', 'llamada')
+            .where('estado', '==', 'pendiente')
+            .limit(1)
+            .get();
+
+          if (yaHayTarea.empty) {
+            let liderNombre = p.liderAsignadoNombre;
+            if (!liderNombre) {
+              const snapLider = await db.collection('usuarios').doc(p.liderAsignadoId).get();
+              if (snapLider.exists) {
+                liderNombre = snapLider.data()?.nombre;
+              }
+            }
+
+            await crearTarea({
+              personaId: p.id,
+              personaNombre: p.nombre,
+              personaTelefono: p.telefonoE164,
+              liderId: p.liderAsignadoId,
+              liderNombre: liderNombre || 'Líder asignado',
+              tipo: 'llamada',
+              prioridad: 'urgente',
+              vence: enDias(2),
+              estado: 'pendiente',
+              creadaEn: new Date().toISOString(),
+              completadaEn: null,
+              nota: '',
+              detalle:
+                'La persona recibió tres mensajes de la iglesia sin contestar ninguno y ahora le toca a un ser humano buscarla.',
+            });
+          }
+        }
       }
     }
 

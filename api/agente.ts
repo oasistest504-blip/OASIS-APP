@@ -1,6 +1,11 @@
 // El agente de Oasis en Vercel. Un solo archivo atiende todas las rutas.
 // Cual de ellas se decide con el parametro r, que asigna vercel.json.
 // La logica de verdad sigue viviendo en la carpeta server/.
+//
+// Vercel puede llamar una funcion de dos formas distintas segun la version
+// de su plataforma: a la antigua, con (req, res) de Node, o a la moderna,
+// con Request y Response. Este archivo entiende las dos, para no depender
+// de cual le toque.
 
 import { verificarSuscripcion, recibirEvento } from '../server/webhook';
 import { enviarPlantilla, enviarEnLote, estadoDelNumero } from '../server/whatsapp';
@@ -258,6 +263,54 @@ async function atender(peticion: Request): Promise<Response> {
   }
 }
 
+function leerFlujo(req: any): Promise<string> {
+  return new Promise((resolver) => {
+    const partes: Buffer[] = [];
+    try {
+      req.on('data', (t: any) => partes.push(typeof t === 'string' ? Buffer.from(t) : t));
+      req.on('end', () => resolver(Buffer.concat(partes).toString('utf8')));
+      req.on('error', () => resolver(''));
+    } catch {
+      resolver('');
+    }
+  });
+}
+
+async function desdeNode(req: any): Promise<Request> {
+  const anfitrion = req.headers['x-forwarded-host'] || req.headers.host || 'oasis.local';
+  const protocolo = req.headers['x-forwarded-proto'] || 'https';
+  const direccion = protocolo + '://' + anfitrion + (req.url || '/');
+
+  const cabeceras = new Headers();
+  const crudas = req.headers || {};
+  Object.keys(crudas).forEach((clave) => {
+    const valor = crudas[clave];
+    if (typeof valor === 'string') cabeceras.set(clave, valor);
+    else if (Array.isArray(valor)) cabeceras.set(clave, valor.join(','));
+  });
+
+  const metodo = (req.method || 'GET').toUpperCase();
+  let cuerpo: string | undefined;
+  if (metodo !== 'GET' && metodo !== 'HEAD') {
+    cuerpo = await leerFlujo(req);
+    if (!cuerpo && req.body != null) {
+      if (typeof req.body === 'string') cuerpo = req.body;
+      else if (Buffer.isBuffer(req.body)) cuerpo = req.body.toString('utf8');
+      else cuerpo = JSON.stringify(req.body);
+    }
+  }
+
+  return new Request(direccion, { method: metodo, headers: cabeceras, body: cuerpo });
+}
+
+async function haciaNode(respuesta: Response, res: any) {
+  res.statusCode = respuesta.status;
+  respuesta.headers.forEach((valor: string, clave: string) => {
+    try { res.setHeader(clave, valor); } catch { }
+  });
+  res.end(await respuesta.text());
+}
+
 export async function GET(peticion: Request) {
   return atender(peticion);
 }
@@ -266,4 +319,10 @@ export async function POST(peticion: Request) {
   return atender(peticion);
 }
 
-export default atender;
+export default async function handler(a: any, b?: any) {
+  if (b && typeof b.setHeader === 'function') {
+    const respuesta = await atender(await desdeNode(a));
+    return haciaNode(respuesta, b);
+  }
+  return atender(a as Request);
+}

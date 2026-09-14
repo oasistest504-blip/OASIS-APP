@@ -7,12 +7,12 @@
 // con Request y Response. Este archivo entiende las dos, para no depender
 // de cual le toque.
 
-import { verificarSuscripcion, recibirEvento } from '../server/webhook';
-import { enviarPlantilla, enviarEnLote, estadoDelNumero } from '../server/whatsapp';
-import { correrSecuencia } from '../server/secuencia';
-import { db, HAY_DB } from '../server/firebaseAdmin';
-import { config as ajustes, WHATSAPP_SIMULADO, HAY_GEMINI } from '../server/config';
-import { PLANTILLAS } from '../src/lib/plantillas';
+import { verificarSuscripcion, recibirEvento } from '../server/webhook.js';
+import { enviarPlantilla, enviarEnLote, estadoDelNumero } from '../server/whatsapp.js';
+import { correrSecuencia } from '../server/secuencia.js';
+import { db, HAY_DB } from '../server/firebaseAdmin.js';
+import { config as ajustes, WHATSAPP_SIMULADO, HAY_GEMINI } from '../server/config.js';
+import { PLANTILLAS } from '../src/lib/plantillas.js';
 
 const cargadas: Record<string, any> = {};
 

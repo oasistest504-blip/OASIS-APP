@@ -1,13 +1,13 @@
 export default async function handler(_req: any, res: any) {
   const salida: any = { node: process.version, piezas: {} };
   const piezas: Record<string, () => Promise<any>> = {
-    config: () => import('../server/config'),
-    plantillas: () => import('../src/lib/plantillas'),
-    firebase: () => import('../server/firebaseAdmin'),
-    whatsapp: () => import('../server/whatsapp'),
-    agente: () => import('../server/agente'),
-    webhook: () => import('../server/webhook'),
-    secuencia: () => import('../server/secuencia'),
+    config: () => import('../server/config.js'),
+    plantillas: () => import('../src/lib/plantillas.js'),
+    firebase: () => import('../server/firebaseAdmin.js'),
+    whatsapp: () => import('../server/whatsapp.js'),
+    agente: () => import('../server/agente.js'),
+    webhook: () => import('../server/webhook.js'),
+    secuencia: () => import('../server/secuencia.js'),
   };
   for (const nombre of Object.keys(piezas)) {
     try {

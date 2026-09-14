@@ -176,7 +176,7 @@ export default function App() {
               onClick={() => ir(esApostol ? 'panel' : 'inicio')}
               style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}
             >
-              <LogoOasis tamano={26} conTexto={false} />
+              <LogoOasis tamano={32} conTexto={false} />
               <span className="logo-pastoral" style={{ margin: 0, padding: '3px 7px', fontSize: '0.72rem' }}>
                 OASIS
               </span>

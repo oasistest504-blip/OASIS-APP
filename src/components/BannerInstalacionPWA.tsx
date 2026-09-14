@@ -73,20 +73,22 @@ export function BannerInstalacionPWA() {
             <div className="fila" style={{ gap: 12, alignItems: 'center', flex: '1 1 220px' }}>
               <div
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  background: 'rgba(255, 255, 255, 0.15)',
+                  width: 50,
+                  height: 50,
+                  borderRadius: 12,
+                  background: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
+                  padding: 4,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
                 }}
               >
                 <img
                   src="/logo.svg"
                   alt="Oasis"
-                  style={{ width: 26, height: 26, objectFit: 'contain' }}
+                  style={{ width: 40, height: 40, objectFit: 'contain', display: 'block' }}
                 />
               </div>
               <div>

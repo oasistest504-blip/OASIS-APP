@@ -7,16 +7,10 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F8FAFC",
-  "theme_color": "#2B5B84",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1F4D78",
   "lang": "es-CO",
   "icons": [
-    {
-      "src": "/logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
@@ -30,10 +24,22 @@
       "purpose": "any"
     },
     {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "/icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

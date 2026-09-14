@@ -38,7 +38,7 @@ export function LogoOasis({
              C 165 210, 155 155, 178 110
              C 200 68, 250 48, 285 54
              Z"
-          fill="#2B5B84"
+          fill="#1F4D78"
         />
 
         {/* Paloma celeste en vuelo */}
@@ -53,7 +53,7 @@ export function LogoOasis({
              C 290 185, 278 165, 275 148
              C 260 152, 245 145, 225 125
              Z"
-          fill="#29A9E0"
+          fill="#20A3E7"
         />
 
         {/* Biblia abierta - Capas de páginas superiores e inferiores */}
@@ -64,7 +64,7 @@ export function LogoOasis({
              C 372 212, 332 208, 296 226
              C 260 208, 220 212, 190 220
              Z"
-          fill="#2B5B84"
+          fill="#1F4D78"
         />
         <path
           d="M 195 226
@@ -74,7 +74,7 @@ export function LogoOasis({
              C 365 225, 330 222, 296 238
              C 262 222, 227 225, 197 240
              Z"
-          fill="#2B5B84"
+          fill="#1F4D78"
         />
         <path
           d="M 180 258
@@ -84,14 +84,14 @@ export function LogoOasis({
              C 375 254, 334 252, 296 270
              C 258 252, 217 254, 182 274
              Z"
-          fill="#2B5B84"
+          fill="#1F4D78"
         />
         <path
           d="M 292 226
              C 294 240, 294 258, 296 270
              C 298 258, 298 240, 300 226
              Z"
-          fill="#2B5B84"
+          fill="#1F4D78"
         />
       </svg>
 
@@ -101,7 +101,7 @@ export function LogoOasis({
             style={{
               fontSize: '1.25rem',
               fontWeight: 500,
-              color: '#2B5B84',
+              color: '#1F4D78',
               fontFamily: 'system-ui, -apple-system, sans-serif',
               letterSpacing: '-0.02em',
               lineHeight: 1.2,

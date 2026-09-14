@@ -3,7 +3,7 @@
 // =====================================================================
 // REQUISITO CRÍTICO: La constante VERSION define el ciclo de vida de la caché.
 // Cada vez que se modifique este archivo o los recursos estáticos, sube el número.
-const VERSION = '1.0.1';
+const VERSION = '1.0.2';
 const CACHE_NAME = 'oasis-cache-v' + VERSION;
 
 // Recursos base indispensables para funcionamiento inicial y offline
@@ -13,6 +13,9 @@ const RECURSOS_PRECACHE = [
   '/manifest.json',
   '/manifest.webmanifest',
   '/logo.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png',
 ];
 
 // ---------------------------------------------------------------------

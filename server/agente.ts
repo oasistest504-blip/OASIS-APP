@@ -13,14 +13,14 @@
 // =====================================================================
 
 import { GoogleGenAI } from '@google/genai';
-import { config, HAY_GEMINI } from './config';
-import type { LecturaAgente } from '../src/lib/types';
+import { config, HAY_GEMINI } from './config.js';
+import type { LecturaAgente } from '../src/lib/types.js';
 import {
   pareceCrisis,
   leerBasico,
   respuestaBasica,
   RESPUESTAS_FIJAS,
-} from '../src/lib/agenteBasico';
+} from '../src/lib/agenteBasico.js';
 
 const ia = HAY_GEMINI ? new GoogleGenAI({ apiKey: config.gemini.apiKey }) : null;
 

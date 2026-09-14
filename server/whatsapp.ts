@@ -9,8 +9,8 @@
 //   5. Un solo reintento si Meta falla; nunca más.
 // =====================================================================
 
-import { config, WHATSAPP_SIMULADO, urlGraph } from './config';
-import { guardarInteraccion } from './firebaseAdmin';
+import { config, WHATSAPP_SIMULADO, urlGraph } from './config.js';
+import { guardarInteraccion } from './firebaseAdmin.js';
 
 export interface DestinoEnvio {
   personaId: string;

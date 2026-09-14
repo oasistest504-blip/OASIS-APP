@@ -9,7 +9,7 @@
 
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { config, HAY_FIREBASE_ADMIN } from './config';
+import { config, HAY_FIREBASE_ADMIN } from './config.js';
 
 let app: App | null = null;
 let firestore: Firestore | null = null;

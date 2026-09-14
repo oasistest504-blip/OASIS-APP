@@ -12,12 +12,12 @@ import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config, WHATSAPP_SIMULADO, HAY_GEMINI } from './config';
-import { db, HAY_DB } from './firebaseAdmin';
-import { enviarPlantilla, enviarEnLote, estadoDelNumero } from './whatsapp';
-import { verificarSuscripcion, recibirEvento } from './webhook';
-import { correrSecuencia } from './secuencia';
-import { PLANTILLAS } from '../src/lib/plantillas';
+import { config, WHATSAPP_SIMULADO, HAY_GEMINI } from './config.js';
+import { db, HAY_DB } from './firebaseAdmin.js';
+import { enviarPlantilla, enviarEnLote, estadoDelNumero } from './whatsapp.js';
+import { verificarSuscripcion, recibirEvento } from './webhook.js';
+import { correrSecuencia } from './secuencia.js';
+import { PLANTILLAS } from '../src/lib/plantillas.js';
 
 const app = express();
 

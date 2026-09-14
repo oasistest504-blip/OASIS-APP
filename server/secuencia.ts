@@ -12,10 +12,10 @@
 //  autorización, ni a quien ya lleva tres mensajes sin responder.
 // =====================================================================
 
-import { db } from './firebaseAdmin';
-import { enviarPlantilla } from './whatsapp';
-import { config } from './config';
-import { SECUENCIA, PLANTILLAS } from '../src/lib/plantillas';
+import { db } from './firebaseAdmin.js';
+import { enviarPlantilla } from './whatsapp.js';
+import { config } from './config.js';
+import { SECUENCIA, PLANTILLAS } from '../src/lib/plantillas.js';
 
 const MAXIMO_SIN_RESPUESTA = 3;
 

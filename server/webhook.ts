@@ -11,17 +11,17 @@
 
 import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
-import { config, WHATSAPP_SIMULADO } from './config';
+import { config, WHATSAPP_SIMULADO } from './config.js';
 import {
   db,
   buscarPersonaPorTelefono,
   guardarInteraccion,
   actualizarPersona,
   crearTarea,
-} from './firebaseAdmin';
-import { leerMensaje, redactarRespuesta } from './agente';
-import { enviarTextoLibre } from './whatsapp';
-import { BOTONES } from '../src/lib/plantillas';
+} from './firebaseAdmin.js';
+import { leerMensaje, redactarRespuesta } from './agente.js';
+import { enviarTextoLibre } from './whatsapp.js';
+import { BOTONES } from '../src/lib/plantillas.js';
 
 /** Verificación inicial: Meta llama con GET una sola vez. */
 export function verificarSuscripcion(req: Request, res: Response) {

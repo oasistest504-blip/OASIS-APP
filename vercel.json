@@ -1,7 +1,26 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "framework": "vite",
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/webhook/whatsapp", "destination": "/api/agente?r=webhook" },
+    { "source": "/api/salud", "destination": "/api/agente?r=salud" },
+    { "source": "/api/whatsapp/estado", "destination": "/api/agente?r=estado" },
+    { "source": "/api/whatsapp/prueba", "destination": "/api/agente?r=prueba" },
+    { "source": "/api/whatsapp/enviar", "destination": "/api/agente?r=enviar" },
+    { "source": "/api/whatsapp/difundir", "destination": "/api/agente?r=difundir" },
+    { "source": "/api/secuencia/correr", "destination": "/api/agente?r=secuencia" }
+  ],
+  "functions": {
+    "api/agente.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/secuencia/correr",
+      "schedule": "0 14 * * *"
+    }
   ]
 }

@@ -22,6 +22,39 @@ import {
 import { GeneradorIconosPWA } from '../components/GeneradorIconosPWA';
 import type { Vista } from '../App';
 
+const TELEFONOS_PERSONAS_DEMO = new Set([
+  '573001112233',
+  '573012223344',
+  '573023334455',
+  '573034445566',
+  '573045556677',
+  '573056667788',
+  '573067778899',
+  '573078889900',
+  '573089990011',
+  '573090001122',
+  '573101112244',
+  '573112223355',
+]);
+
+const TELEFONOS_USUARIOS_DEMO = new Set([
+  '573001234567',
+  '573112223344',
+  '573123334455',
+  '573145556677',
+  '573156667788',
+  '573167778899',
+]);
+
+function coincideTelefono(tel: unknown, conjunto: Set<string>): boolean {
+  if (!tel || typeof tel !== 'string') return false;
+  const limpio = tel.replace(/\D/g, '');
+  if (conjunto.has(limpio)) return true;
+  if (conjunto.has(tel.trim())) return true;
+  if (limpio.length === 10 && conjunto.has('57' + limpio)) return true;
+  return false;
+}
+
 export default function AjustesPrivados({
   ir,
   avisar,
@@ -41,6 +74,8 @@ export default function AjustesPrivados({
   const [cargandoPrueba, setCargandoPrueba] = useState(false);
   const [borrandoPrueba, setBorrandoPrueba] = useState(false);
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
+  const [confirmandoBorradoDemo, setConfirmandoBorradoDemo] = useState(false);
+  const [borrandoDemo, setBorrandoDemo] = useState(false);
   const [auditorias, setAuditorias] = useState<RegistroAuditoria[]>([]);
 
   useEffect(() => {
@@ -277,6 +312,253 @@ export default function AjustesPrivados({
     }
   }
 
+  async function borrarDatosDemostracion() {
+    setBorrandoDemo(true);
+    try {
+      let cantUsuarios = 0;
+      let cantPersonas = 0;
+      let cantTareas = 0;
+      let cantInteracciones = 0;
+
+      // 1. Borrar en Firestore si la base de datos está conectada
+      if (!store.modoDemo && db) {
+        // A. Identificar y recopilar IDs de usuarios de demostración o prueba
+        const snapUsuarios = await getDocs(collection(db, 'usuarios'));
+        const docsUsuariosParaBorrar: any[] = [];
+        const usuariosDemoIds = new Set<string>();
+
+        for (const d of snapUsuarios.docs) {
+          const data = d.data();
+          if (
+            data.esPrueba === true ||
+            coincideTelefono(data.telefono, TELEFONOS_USUARIOS_DEMO) ||
+            coincideTelefono(data.telefonoE164, TELEFONOS_USUARIOS_DEMO)
+          ) {
+            docsUsuariosParaBorrar.push(d);
+            usuariosDemoIds.add(d.id);
+          }
+        }
+
+        // B. Identificar y recopilar IDs de personas de demostración o prueba
+        const snapPersonas = await getDocs(collection(db, 'personas'));
+        const docsPersonasParaBorrar: any[] = [];
+        const personasDemoIds = new Set<string>();
+
+        for (const d of snapPersonas.docs) {
+          const data = d.data();
+          if (
+            data.esPrueba === true ||
+            coincideTelefono(data.telefonoE164, TELEFONOS_PERSONAS_DEMO) ||
+            coincideTelefono(data.telefono, TELEFONOS_PERSONAS_DEMO)
+          ) {
+            docsPersonasParaBorrar.push(d);
+            personasDemoIds.add(d.id);
+          }
+        }
+
+        // C. Tareas que pertenezcan a cualquiera de esas personas o líderes, o con esPrueba === true
+        const snapTareas = await getDocs(collection(db, 'tareas'));
+        const docsTareasParaBorrar: any[] = [];
+
+        for (const d of snapTareas.docs) {
+          const data = d.data();
+          if (
+            data.esPrueba === true ||
+            (Boolean(data.personaId) && personasDemoIds.has(data.personaId)) ||
+            (Boolean(data.liderId) && usuariosDemoIds.has(data.liderId))
+          ) {
+            docsTareasParaBorrar.push(d);
+          }
+        }
+
+        // D. Interacciones que pertenezcan a cualquiera de esas personas o líderes, o con esPrueba === true
+        const snapInteracciones = await getDocs(collection(db, 'interacciones'));
+        const docsInteraccionesParaBorrar: any[] = [];
+
+        for (const d of snapInteracciones.docs) {
+          const data = d.data();
+          if (
+            data.esPrueba === true ||
+            (Boolean(data.personaId) && personasDemoIds.has(data.personaId)) ||
+            (Boolean(data.liderId) && usuariosDemoIds.has(data.liderId)) ||
+            (Boolean(data.registradoPorUid) && usuariosDemoIds.has(data.registradoPorUid)) ||
+            (Boolean(data.creadoPorUid) && usuariosDemoIds.has(data.creadoPorUid))
+          ) {
+            docsInteraccionesParaBorrar.push(d);
+          }
+        }
+
+        // Ejecutar borrado en Firestore
+        for (const d of docsUsuariosParaBorrar) {
+          try {
+            await deleteDoc(d.ref);
+            cantUsuarios++;
+          } catch (e) {
+            console.warn('Error al borrar usuario demo:', d.id, e);
+          }
+        }
+
+        for (const d of docsPersonasParaBorrar) {
+          try {
+            await deleteDoc(d.ref);
+            cantPersonas++;
+          } catch (e) {
+            console.warn('Error al borrar persona demo:', d.id, e);
+          }
+        }
+
+        for (const d of docsTareasParaBorrar) {
+          try {
+            await deleteDoc(d.ref);
+            cantTareas++;
+          } catch (e) {
+            console.warn('Error al borrar tarea demo:', d.id, e);
+          }
+        }
+
+        for (const d of docsInteraccionesParaBorrar) {
+          try {
+            await deleteDoc(d.ref);
+            cantInteracciones++;
+          } catch (e) {
+            console.warn('Error al borrar interacción demo:', d.id, e);
+          }
+        }
+      }
+
+      // 2. Limpiar también almacenamiento local (modo demo)
+      try {
+        const crudo = localStorage.getItem('oasis-seguimiento-demo-v1');
+        if (crudo) {
+          const d = JSON.parse(crudo);
+          const usuariosList = d.usuarios || [];
+          const personasList = d.personas || [];
+          const tareasList = d.tareas || [];
+          const interaccionesList = d.interacciones || [];
+
+          const usuariosDemoIdsLocal = new Set<string>();
+          const usuariosRestantes: any[] = [];
+          let localU = 0;
+
+          for (const u of usuariosList) {
+            if (
+              u.esPrueba === true ||
+              coincideTelefono(u.telefono, TELEFONOS_USUARIOS_DEMO) ||
+              coincideTelefono(u.telefonoE164, TELEFONOS_USUARIOS_DEMO)
+            ) {
+              usuariosDemoIdsLocal.add(u.id);
+              localU++;
+            } else {
+              usuariosRestantes.push(u);
+            }
+          }
+
+          const personasDemoIdsLocal = new Set<string>();
+          const personasRestantes: any[] = [];
+          let localP = 0;
+
+          for (const p of personasList) {
+            if (
+              p.esPrueba === true ||
+              coincideTelefono(p.telefonoE164, TELEFONOS_PERSONAS_DEMO) ||
+              coincideTelefono(p.telefono, TELEFONOS_PERSONAS_DEMO)
+            ) {
+              personasDemoIdsLocal.add(p.id);
+              localP++;
+            } else {
+              personasRestantes.push(p);
+            }
+          }
+
+          const tareasRestantes: any[] = [];
+          let localT = 0;
+
+          for (const t of tareasList) {
+            if (
+              t.esPrueba === true ||
+              (Boolean(t.personaId) && personasDemoIdsLocal.has(t.personaId)) ||
+              (Boolean(t.liderId) && usuariosDemoIdsLocal.has(t.liderId))
+            ) {
+              localT++;
+            } else {
+              tareasRestantes.push(t);
+            }
+          }
+
+          const interaccionesRestantes: any[] = [];
+          let localI = 0;
+
+          for (const i of interaccionesList) {
+            if (
+              i.esPrueba === true ||
+              (Boolean(i.personaId) && personasDemoIdsLocal.has(i.personaId)) ||
+              (Boolean(i.liderId) && usuariosDemoIdsLocal.has(i.liderId)) ||
+              (Boolean(i.registradoPorUid) && usuariosDemoIdsLocal.has(i.registradoPorUid)) ||
+              (Boolean(i.creadoPorUid) && usuariosDemoIdsLocal.has(i.creadoPorUid))
+            ) {
+              localI++;
+            } else {
+              interaccionesRestantes.push(i);
+            }
+          }
+
+          d.usuarios = usuariosRestantes;
+          d.personas = personasRestantes;
+          d.tareas = tareasRestantes;
+          d.interacciones = interaccionesRestantes;
+
+          localStorage.setItem('oasis-seguimiento-demo-v1', JSON.stringify(d));
+
+          if (cantUsuarios === 0 && cantPersonas === 0 && cantTareas === 0 && cantInteracciones === 0) {
+            cantUsuarios = localU;
+            cantPersonas = localP;
+            cantTareas = localT;
+            cantInteracciones = localI;
+          }
+        }
+      } catch (errLocal) {
+        console.warn('Error al borrar en local storage demo:', errLocal);
+      }
+
+      const totalBorrados = cantUsuarios + cantPersonas + cantTareas + cantInteracciones;
+
+      // 3. Bitácora de auditoría
+      if (usuario) {
+        await store.registrarAuditoria({
+          uid: usuario.id,
+          nombre: usuario.nombre,
+          accion: 'borró los datos de demostración',
+          objetivo: 'Datos de demostración',
+          detalle:
+            totalBorrados > 0
+              ? `Se eliminaron ${cantUsuarios} usuarios, ${cantPersonas} personas, ${cantTareas} tareas y ${cantInteracciones} interacciones.`
+              : 'No se encontraron registros de demostración para eliminar.',
+          fecha: new Date().toISOString(),
+        });
+      }
+
+      // 4. Mensaje con conteo por tipo o advertencia si no se encontró ninguno
+      if (totalBorrados === 0) {
+        avisar('No se encontró ningún registro de demostración para borrar.');
+      } else {
+        avisar(
+          `Se borraron los datos de demostración: ${cantUsuarios} usuario(s), ${cantPersonas} persona(s), ${cantTareas} tarea(s) y ${cantInteracciones} interacción(es).`,
+        );
+      }
+
+      if (store.modoDemo && totalBorrados > 0) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      }
+    } catch (err: any) {
+      avisar(`Error al borrar datos de demostración: ${err?.message ?? 'error desconocido'}`);
+    } finally {
+      setBorrandoDemo(false);
+      setConfirmandoBorradoDemo(false);
+    }
+  }
+
   return (
     <div style={{ paddingBottom: 30 }}>
       <div className="fila-entre" style={{ marginBottom: 10 }}>
@@ -352,6 +634,15 @@ export default function AjustesPrivados({
             disabled={sembrando}
           >
             {sembrando ? 'Restaurando…' : 'Restaurar datos de prueba / demo'}
+          </button>
+
+          <button
+            type="button"
+            className="btn peligro ancho"
+            onClick={() => setConfirmandoBorradoDemo(true)}
+            disabled={borrandoDemo || sembrando}
+          >
+            {borrandoDemo ? 'Borrando datos de demostración…' : 'Borrar los datos de demostración'}
           </button>
         </div>
 
@@ -459,6 +750,39 @@ export default function AjustesPrivados({
               disabled={borrandoPrueba}
             >
               {borrandoPrueba ? 'Borrando…' : 'Sí, borrar datos de prueba'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de confirmación para borrar datos de demostración */}
+      {confirmandoBorradoDemo && (
+        <Modal
+          titulo="¿Borrar los datos de demostración?"
+          onCerrar={() => !borrandoDemo && setConfirmandoBorradoDemo(false)}
+        >
+          <Aviso tipo="peligro">
+            Se van a borrar de la base de datos los registros de demostración y esa acción no se puede deshacer.
+          </Aviso>
+          <p className="texto-medio" style={{ marginTop: 12, marginBottom: 16 }}>
+            Esta acción eliminará de la base de datos las personas y líderes de demostración, todas sus tareas e interacciones asociadas, o cualquier registro marcado como prueba. Los datos reales permanecerán intactos.
+          </p>
+          <div className="fila" style={{ gap: 8 }}>
+            <button
+              type="button"
+              className="btn secundario crecer"
+              onClick={() => setConfirmandoBorradoDemo(false)}
+              disabled={borrandoDemo}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn peligro crecer"
+              onClick={borrarDatosDemostracion}
+              disabled={borrandoDemo}
+            >
+              {borrandoDemo ? 'Borrando…' : 'Sí, borrar datos de demostración'}
             </button>
           </div>
         </Modal>

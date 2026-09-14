@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useDatos } from '../context/DatosContext';
 import { store, MODO_DEMO } from '../lib/store';
@@ -41,6 +41,10 @@ export default function RegistrarPersona({
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
+  const nombreInputRef = useRef<HTMLInputElement>(null);
+  const telefonoInputRef = useRef<HTMLInputElement>(null);
+  const autorizacionInputRef = useRef<HTMLInputElement>(null);
+
   const telefonoLimpio = normalizarTelefono(telefono);
   const personaExistente = telefonoLimpio
     ? personas.find((p) => p.telefonoE164 === telefonoLimpio)
@@ -69,20 +73,28 @@ export default function RegistrarPersona({
 
     if (nombre.trim().length < 3) {
       setError('Escribe el nombre completo de la persona.');
+      nombreInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      nombreInputRef.current?.focus();
       return;
     }
     if (!telefonoLimpio) {
       setError('Ese número no se entiende. Escríbelo como 300 123 4567.');
+      telefonoInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      telefonoInputRef.current?.focus();
       return;
     }
     if (personaExistente) {
       setError(`Ese número ya está registrado a nombre de ${personaExistente.nombre}.`);
+      telefonoInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      telefonoInputRef.current?.focus();
       return;
     }
     if (!autorizacion) {
       setError(
         'Sin la autorización de la persona no podemos escribirle. Es la ley, y también lo que protege el número de la iglesia.',
       );
+      autorizacionInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      autorizacionInputRef.current?.focus();
       return;
     }
     if (!usuario) return;
@@ -204,9 +216,13 @@ export default function RegistrarPersona({
         <div className="campo">
           <label className="etiqueta">Nombre completo</label>
           <input
+            ref={nombreInputRef}
             type="text"
             value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
+            onChange={(e) => {
+              setNombre(e.target.value);
+              if (error) setError('');
+            }}
             placeholder="Ej: María Fernanda Ríos"
             required
             autoFocus
@@ -216,9 +232,13 @@ export default function RegistrarPersona({
         <div className="campo">
           <label className="etiqueta">Número de celular (WhatsApp)</label>
           <input
+            ref={telefonoInputRef}
             type="tel"
             value={telefono}
-            onChange={(e) => setTelefono(e.target.value)}
+            onChange={(e) => {
+              setTelefono(e.target.value);
+              if (error) setError('');
+            }}
             placeholder="300 123 4567"
             inputMode="tel"
             required
@@ -232,7 +252,13 @@ export default function RegistrarPersona({
 
         <div className="campo">
           <label className="etiqueta">¿Cómo llegó o de dónde viene?</label>
-          <select value={origen} onChange={(e) => setOrigen(e.target.value)}>
+          <select
+            value={origen}
+            onChange={(e) => {
+              setOrigen(e.target.value);
+              if (error) setError('');
+            }}
+          >
             {ORIGENES.map((o) => (
               <option key={o} value={o}>
                 {o}
@@ -245,7 +271,10 @@ export default function RegistrarPersona({
           <label className="etiqueta">Medio de autorización (Habeas Data)</label>
           <select
             value={medioConsentimiento}
-            onChange={(e) => setMedioConsentimiento(e.target.value)}
+            onChange={(e) => {
+              setMedioConsentimiento(e.target.value);
+              if (error) setError('');
+            }}
           >
             {MEDIOS_CONSENTIMIENTO.map((m) => (
               <option key={m} value={m}>
@@ -266,9 +295,13 @@ export default function RegistrarPersona({
             }}
           >
             <input
+              ref={autorizacionInputRef}
               type="checkbox"
               checked={autorizacion}
-              onChange={(e) => setAutorizacion(e.target.checked)}
+              onChange={(e) => {
+                setAutorizacion(e.target.checked);
+                if (error) setError('');
+              }}
               style={{ marginTop: 3 }}
             />
             <span>
@@ -321,11 +354,20 @@ export default function RegistrarPersona({
           <label className="etiqueta">Notas iniciales o petición de oración (opcional)</label>
           <textarea
             value={notas}
-            onChange={(e) => setNotas(e.target.value)}
+            onChange={(e) => {
+              setNotas(e.target.value);
+              if (error) setError('');
+            }}
             placeholder="Ej: Vive en el barrio Prados, vino con su hermana. Pidió oración por la salud de su mamá."
             rows={3}
           />
         </div>
+
+        {error && (
+          <div style={{ marginBottom: 14 }}>
+            <Aviso tipo="peligro">{error}</Aviso>
+          </div>
+        )}
 
         <button type="submit" className="btn ancho" disabled={guardando}>
           {guardando ? 'Guardando…' : 'Registrar persona'}

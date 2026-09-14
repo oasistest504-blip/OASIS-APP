@@ -157,6 +157,87 @@ function limpiar<T extends Record<string, any>>(objeto: T): T {
   return salida as T;
 }
 
+const observadoresErrorInteracciones = new Map<string, MutationObserver>();
+
+function mostrarAvisoErrorInteracciones(personaId: string) {
+  if (typeof document === 'undefined') return;
+
+  const aplicar = () => {
+    const rotulos = Array.from(document.querySelectorAll('.rotulo'));
+    const rotulo = rotulos.find((r) =>
+      r.textContent?.toLowerCase().includes('registro de mensajes e interacciones'),
+    );
+    if (!rotulo) return;
+
+    const seccion = rotulo.closest('.seccion');
+    if (!seccion) return;
+
+    // Ocultar el texto por defecto de "no hay mensajes"
+    const parrafos = seccion.querySelectorAll('p.texto-chico');
+    parrafos.forEach((p) => {
+      if (p.textContent?.toLowerCase().includes('no hay mensajes')) {
+        (p as HTMLElement).style.display = 'none';
+      }
+    });
+
+    // Ocultar pila de mensajes si existiera
+    const pila = seccion.querySelector('.pila') as HTMLElement | null;
+    if (pila) {
+      pila.style.display = 'none';
+    }
+
+    // Insertar o mostrar el aviso rojo de peligro
+    let aviso = seccion.querySelector('.aviso-error-interacciones') as HTMLElement | null;
+    if (!aviso) {
+      aviso = document.createElement('div');
+      aviso.className = 'aviso peligro aviso-error-interacciones';
+      aviso.id = 'aviso-error-interacciones';
+      aviso.style.marginTop = '8px';
+      aviso.innerHTML = '<div class="aviso-cuerpo">No se pudieron cargar los mensajes de esta persona.</div>';
+      rotulo.insertAdjacentElement('afterend', aviso);
+    } else {
+      aviso.style.display = 'block';
+    }
+  };
+
+  aplicar();
+
+  if (!observadoresErrorInteracciones.has(personaId)) {
+    const observer = new MutationObserver(() => {
+      aplicar();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    observadoresErrorInteracciones.set(personaId, observer);
+  }
+}
+
+function limpiarAvisoErrorInteracciones(personaId: string) {
+  if (typeof document === 'undefined') return;
+
+  const obs = observadoresErrorInteracciones.get(personaId);
+  if (obs) {
+    obs.disconnect();
+    observadoresErrorInteracciones.delete(personaId);
+  }
+
+  const aviso = document.getElementById('aviso-error-interacciones');
+  if (aviso) aviso.remove();
+
+  const rotulos = Array.from(document.querySelectorAll('.rotulo'));
+  const rotulo = rotulos.find((r) =>
+    r.textContent?.toLowerCase().includes('registro de mensajes e interacciones'),
+  );
+  const seccion = rotulo?.closest('.seccion');
+  if (seccion) {
+    const parrafos = seccion.querySelectorAll('p.texto-chico');
+    parrafos.forEach((p) => {
+      (p as HTMLElement).style.display = '';
+    });
+    const pila = seccion.querySelector('.pila') as HTMLElement | null;
+    if (pila) pila.style.display = '';
+  }
+}
+
 // ---------------------------------------------------------------------
 //  API pública
 // ---------------------------------------------------------------------
@@ -499,6 +580,9 @@ export const store = {
 
   // ---------------- interacciones ----------------
 
+  erroresInteracciones: {} as Record<string, any>,
+  ultimoErrorInteracciones: null as any,
+
   observarInteracciones(personaId: string, cb: Escucha<Interaccion>): Cancelar {
     if (MODO_DEMO) {
       return suscribirDemo<Interaccion>('interacciones', (todas) =>
@@ -509,18 +593,34 @@ export const store = {
         ),
       );
     }
-    return onSnapshot(
+
+    const unsub = onSnapshot(
       query(
         collection(db!, 'interacciones'),
         where('personaId', '==', personaId),
-        orderBy('fecha', 'asc'),
       ),
-      (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Interaccion)),
+      (snap) => {
+        limpiarAvisoErrorInteracciones(personaId);
+        delete store.erroresInteracciones[personaId];
+        const interacciones = snap.docs.map(
+          (d) => ({ id: d.id, ...d.data() }) as Interaccion,
+        );
+        interacciones.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+        cb(interacciones);
+      },
       (error) => {
-        console.warn('Error al leer interacciones en Firestore:', error);
+        console.error('Error al leer interacciones en Firestore:', error);
+        store.ultimoErrorInteracciones = error;
+        store.erroresInteracciones[personaId] = error;
         cb([]);
-      }
+        mostrarAvisoErrorInteracciones(personaId);
+      },
     );
+
+    return () => {
+      unsub();
+      limpiarAvisoErrorInteracciones(personaId);
+    };
   },
 
   /**

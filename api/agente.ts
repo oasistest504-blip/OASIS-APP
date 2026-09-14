@@ -327,14 +327,6 @@ async function haciaNode(respuesta: Response, res: any) {
   res.end(await respuesta.text());
 }
 
-export async function GET(peticion: Request) {
-  return atender(peticion);
-}
-
-export async function POST(peticion: Request) {
-  return atender(peticion);
-}
-
 export default async function handler(a: any, b?: any) {
   if (b && typeof b.setHeader === 'function') {
     const respuesta = await atender(await desdeNode(a));

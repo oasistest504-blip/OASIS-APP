@@ -2,7 +2,6 @@
 // Cual de ellas se decide con el parametro r, que asigna vercel.json.
 // La logica de verdad sigue viviendo en la carpeta server/.
 
-import type { IncomingMessage, ServerResponse } from 'node:http';
 import { verificarSuscripcion, recibirEvento } from '../server/webhook';
 import { enviarPlantilla, enviarEnLote, estadoDelNumero } from '../server/whatsapp';
 import { correrSecuencia } from '../server/secuencia';
@@ -10,62 +9,51 @@ import { db, HAY_DB } from '../server/firebaseAdmin';
 import { config as ajustes, WHATSAPP_SIMULADO, HAY_GEMINI } from '../server/config';
 import { PLANTILLAS } from '../src/lib/plantillas';
 
-// Vercel no debe tocar el cuerpo: se necesita tal cual llega para
-// comprobar la firma de Meta.
-export const config = { api: { bodyParser: false } };
-
-type Peticion = IncomingMessage;
-type Respuesta = ServerResponse;
-
-async function leerCuerpo(req: Peticion): Promise<{ crudo: Buffer; datos: any }> {
-  const partes: Buffer[] = [];
-  for await (const parte of req) {
-    partes.push(typeof parte === 'string' ? Buffer.from(parte) : (parte as Buffer));
-  }
-  const crudo = Buffer.concat(partes);
-  let datos: any = {};
-  if (crudo.length) {
-    try {
-      datos = JSON.parse(crudo.toString('utf8'));
-    } catch {
-      datos = {};
-    }
-  }
-  return { crudo, datos };
+function json(obj: unknown, codigo = 200): Response {
+  return new Response(JSON.stringify(obj), {
+    status: codigo,
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+  });
 }
 
-function responder(res: Respuesta, codigo: number, obj: unknown) {
-  res.statusCode = codigo;
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.end(JSON.stringify(obj));
-}
-
-function texto(res: Respuesta, codigo: number, cuerpo: string) {
-  res.statusCode = codigo;
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-  res.end(cuerpo);
+function plano(cuerpo: string, codigo = 200): Response {
+  return new Response(cuerpo, {
+    status: codigo,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
 }
 
 function primerNombre(nombre: string): string {
   return (nombre ?? '').trim().split(/\s+/)[0] ?? '';
 }
 
-function llamadaAutorizada(req: Peticion): boolean {
+function llamadaAutorizada(peticion: Request): boolean {
   const secreto = process.env.CRON_SECRET;
   if (!secreto) return true;
-  return req.headers['authorization'] === 'Bearer ' + secreto;
+  return peticion.headers.get('authorization') === 'Bearer ' + secreto;
 }
 
-// server/webhook.ts esta escrito para Express. En vez de duplicar esa
-// logica, le damos objetos con la forma que espera.
-function fingirPeticion(base: Peticion, query: Record<string, string>, body: any, crudo?: Buffer) {
+function leerJson(crudo: string): any {
+  if (!crudo) return {};
+  try {
+    return JSON.parse(crudo);
+  } catch {
+    return {};
+  }
+}
+
+function fingirPeticion(
+  peticion: Request,
+  query: Record<string, string>,
+  body: any,
+  crudo?: string,
+) {
   return {
     query,
     body,
-    rawBody: crudo,
+    rawBody: crudo === undefined ? undefined : Buffer.from(crudo, 'utf8'),
     get(nombre: string) {
-      const valor = base.headers[nombre.toLowerCase()];
-      return Array.isArray(valor) ? valor[0] : valor;
+      return peticion.headers.get(nombre) ?? undefined;
     },
   } as any;
 }
@@ -81,14 +69,11 @@ function fingirRespuesta() {
   return { objeto, estado };
 }
 
-// Si no viene el parametro r, se deduce de la direccion, para que la
-// funcion tambien responda si se la llama directamente.
 function cualRuta(url: URL): string {
   const r = url.searchParams.get('r');
   if (r) return r;
   const p = url.pathname;
-  if (p.indexOf('/webhook') === 0) return 'webhook';
-  if (p.indexOf('/api/webhook') === 0) return 'webhook';
+  if (p.indexOf('/webhook') === 0 || p.indexOf('/api/webhook') === 0) return 'webhook';
   if (p.indexOf('/api/secuencia') === 0) return 'secuencia';
   if (p.indexOf('/api/whatsapp/estado') === 0) return 'estado';
   if (p.indexOf('/api/whatsapp/prueba') === 0) return 'prueba';
@@ -97,34 +82,32 @@ function cualRuta(url: URL): string {
   return 'salud';
 }
 
-export default async function handler(req: Peticion, res: Respuesta) {
-  const url = new URL(req.url ?? '/', 'http://oasis');
+async function atender(peticion: Request): Promise<Response> {
+  const url = new URL(peticion.url);
   const ruta = cualRuta(url);
+  const metodo = peticion.method;
   const query: Record<string, string> = {};
   url.searchParams.forEach((v, k) => { query[k] = v; });
 
   try {
     if (ruta === 'webhook') {
-      if (req.method === 'GET') {
+      if (metodo === 'GET') {
         const { objeto, estado } = fingirRespuesta();
-        verificarSuscripcion(fingirPeticion(req, query, {}), objeto);
-        return texto(res, estado.codigo, estado.cuerpo);
+        verificarSuscripcion(fingirPeticion(peticion, query, {}), objeto);
+        return plano(estado.cuerpo, estado.codigo);
       }
-      if (req.method !== 'POST') return responder(res, 405, { mensaje: 'Metodo no permitido.' });
+      if (metodo !== 'POST') return json({ mensaje: 'Metodo no permitido.' }, 405);
 
-      const { crudo, datos } = await leerCuerpo(req);
+      const crudo = await peticion.text();
       const { objeto, estado } = fingirRespuesta();
 
-      // El servidor de siempre contestaba y procesaba despues. En Vercel
-      // la funcion se congela apenas responde, asi que primero se hace el
-      // trabajo y solo entonces se contesta.
-      await recibirEvento(fingirPeticion(req, query, datos, crudo), objeto);
+      await recibirEvento(fingirPeticion(peticion, query, leerJson(crudo), crudo), objeto);
 
-      return texto(res, estado.codigo, estado.cuerpo);
+      return plano(estado.cuerpo, estado.codigo);
     }
 
     if (ruta === 'salud') {
-      return responder(res, 200, {
+      return json({
         ok: true,
         whatsapp: WHATSAPP_SIMULADO ? 'simulado' : 'conectado',
         baseDeDatos: HAY_DB ? 'conectada' : 'sin conectar',
@@ -133,27 +116,27 @@ export default async function handler(req: Peticion, res: Respuesta) {
     }
 
     if (ruta === 'estado') {
-      return responder(res, 200, await estadoDelNumero());
+      return json(await estadoDelNumero());
     }
 
     if (ruta === 'secuencia') {
-      if (req.method !== 'GET' && req.method !== 'POST') {
-        return responder(res, 405, { mensaje: 'Metodo no permitido.' });
+      if (metodo !== 'GET' && metodo !== 'POST') {
+        return json({ mensaje: 'Metodo no permitido.' }, 405);
       }
-      if (!llamadaAutorizada(req)) {
-        return responder(res, 401, { mensaje: 'Esta direccion no se puede llamar desde fuera.' });
+      if (!llamadaAutorizada(peticion)) {
+        return json({ mensaje: 'Esta direccion no se puede llamar desde fuera.' }, 401);
       }
-      return responder(res, 200, await correrSecuencia());
+      return json(await correrSecuencia());
     }
 
     if (ruta === 'prueba') {
-      if (req.method !== 'POST') return responder(res, 405, { mensaje: 'Metodo no permitido.' });
-      const { datos } = await leerCuerpo(req);
+      if (metodo !== 'POST') return json({ mensaje: 'Metodo no permitido.' }, 405);
+      const datos = leerJson(await peticion.text());
       const telefono = datos?.telefono;
       const plantilla = datos?.plantilla;
       const variables = datos?.variables;
       if (!telefono || !plantilla) {
-        return responder(res, 400, { mensaje: 'Faltan el telefono o la plantilla.' });
+        return json({ mensaje: 'Faltan el telefono o la plantilla.' }, 400);
       }
       const def = PLANTILLAS[plantilla];
       const r = await enviarPlantilla({
@@ -162,7 +145,7 @@ export default async function handler(req: Peticion, res: Respuesta) {
         idioma: def?.idioma ?? 'es',
         variables: Array.isArray(variables) ? variables : [],
       });
-      return responder(res, 200, {
+      return json({
         ok: r.estado !== 'fallido',
         enviados: r.estado === 'fallido' || r.estado === 'omitido' ? 0 : 1,
         omitidos: r.estado === 'omitido' ? 1 : 0,
@@ -173,27 +156,25 @@ export default async function handler(req: Peticion, res: Respuesta) {
     }
 
     if (ruta === 'enviar') {
-      if (req.method !== 'POST') return responder(res, 405, { mensaje: 'Metodo no permitido.' });
-      const { datos } = await leerCuerpo(req);
+      if (metodo !== 'POST') return json({ mensaje: 'Metodo no permitido.' }, 405);
+      const datos = leerJson(await peticion.text());
       const personaId = datos?.personaId;
       const telefono = datos?.telefono;
       const plantilla = datos?.plantilla;
       const variables = datos?.variables;
       if (!telefono || !plantilla) {
-        return responder(res, 400, { mensaje: 'Faltan el telefono o la plantilla.' });
+        return json({ mensaje: 'Faltan el telefono o la plantilla.' }, 400);
       }
 
-      // El navegador ya comprueba el consentimiento, pero esta es la
-      // comprobacion que de verdad protege el numero de la iglesia.
       if (HAY_DB && personaId && db) {
         const doc = await db.collection('personas').doc(personaId).get();
         const p: any = doc.data();
-        if (!p) return responder(res, 404, { mensaje: 'Esa persona no existe.' });
+        if (!p) return json({ mensaje: 'Esa persona no existe.' }, 404);
         if (!p.consentimiento?.otorgado) {
-          return responder(res, 403, { mensaje: 'Esa persona no tiene autorizacion registrada.' });
+          return json({ mensaje: 'Esa persona no tiene autorizacion registrada.' }, 403);
         }
         if (p.banderas?.includes('No contactar')) {
-          return responder(res, 403, { mensaje: 'Esa persona pidio no recibir mas mensajes.' });
+          return json({ mensaje: 'Esa persona pidio no recibir mas mensajes.' }, 403);
         }
       }
 
@@ -205,7 +186,7 @@ export default async function handler(req: Peticion, res: Respuesta) {
         idioma: def?.idioma ?? 'es',
         variables: Array.isArray(variables) ? variables : [],
       });
-      return responder(res, 200, {
+      return json({
         ok: r.estado !== 'fallido',
         enviados: r.estado === 'enviado' || r.estado === 'simulado' ? 1 : 0,
         omitidos: r.estado === 'omitido' ? 1 : 0,
@@ -216,8 +197,8 @@ export default async function handler(req: Peticion, res: Respuesta) {
     }
 
     if (ruta === 'difundir') {
-      if (req.method !== 'POST') return responder(res, 405, { mensaje: 'Metodo no permitido.' });
-      const { datos } = await leerCuerpo(req);
+      if (metodo !== 'POST') return json({ mensaje: 'Metodo no permitido.' }, 405);
+      const datos = leerJson(await peticion.text());
       const difusionId = datos?.difusionId;
       const plantilla = datos?.plantilla;
       const urlMedia = datos?.urlMedia;
@@ -225,15 +206,15 @@ export default async function handler(req: Peticion, res: Respuesta) {
       const destinatarios = datos?.destinatarios;
 
       if (!Array.isArray(destinatarios) || destinatarios.length === 0) {
-        return responder(res, 400, { mensaje: 'No hay destinatarios.' });
+        return json({ mensaje: 'No hay destinatarios.' }, 400);
       }
       if (destinatarios.length > ajustes.limiteDiario) {
-        return responder(res, 400, {
+        return json({
           mensaje: 'El envio supera el limite de ' + ajustes.limiteDiario + ' personas cada 24 horas.',
-        });
+        }, 400);
       }
       const def = PLANTILLAS[plantilla];
-      if (!def) return responder(res, 400, { mensaje: 'Esa plantilla no esta registrada en la app.' });
+      if (!def) return json({ mensaje: 'Esa plantilla no esta registrada en la app.' }, 400);
 
       const resultados = await enviarEnLote(destinatarios, (d: any) => ({
         plantilla: def.nombre,
@@ -259,7 +240,7 @@ export default async function handler(req: Peticion, res: Respuesta) {
           .catch(() => undefined);
       }
 
-      return responder(res, 200, {
+      return json({
         ok: fallidos === 0,
         total: destinatarios.length,
         enviados,
@@ -270,9 +251,19 @@ export default async function handler(req: Peticion, res: Respuesta) {
       });
     }
 
-    return responder(res, 404, { mensaje: 'No existe esa ruta.' });
+    return json({ mensaje: 'No existe esa ruta.' }, 404);
   } catch (e: any) {
     console.error('[api] error en', ruta, e?.message);
-    return responder(res, 500, { mensaje: e?.message ?? 'Error inesperado en el servidor.' });
+    return json({ mensaje: e?.message ?? 'Error inesperado en el servidor.' }, 500);
   }
 }
+
+export async function GET(peticion: Request) {
+  return atender(peticion);
+}
+
+export async function POST(peticion: Request) {
+  return atender(peticion);
+}
+
+export default atender;

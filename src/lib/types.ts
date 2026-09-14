@@ -81,6 +81,7 @@ export interface Usuario {
   activo: boolean;
   capacidadSemanal: number;
   creadoEn: string;
+  esPrueba?: boolean;
 }
 
 export interface Consentimiento {
@@ -108,6 +109,7 @@ export interface Persona {
   sinRespuestaConsecutivos: number;
   pasosEnviados: string[];
   creadoPorUid: string;
+  esPrueba?: boolean;
 }
 
 export interface Tarea {
@@ -128,6 +130,7 @@ export interface Tarea {
   nota?: string;
   asignadaPor?: string;
   leidaEn?: string | null;
+  esPrueba?: boolean;
 }
 
 export interface Interaccion {
@@ -139,6 +142,7 @@ export interface Interaccion {
   texto: string;
   estado?: 'enviado' | 'entregado' | 'leido' | 'fallido' | null;
   fecha: string;
+  esPrueba?: boolean;
 }
 
 export interface Difusion {

@@ -3,8 +3,9 @@ import { useAuth } from '../context/AuthContext';
 import { useDatos } from '../context/DatosContext';
 import { store, MODO_DEMO } from '../lib/store';
 import { db } from '../lib/firebase';
-import { collection, doc, deleteDoc, getDocs, addDoc } from 'firebase/firestore';
-import type { RegistroAuditoria } from '../lib/types';
+import { collection, doc, deleteDoc, getDocs, addDoc, setDoc, deleteField } from 'firebase/firestore';
+import type { RegistroAuditoria, Configuracion } from '../lib/types';
+import { cifrarClave } from '../lib/claves';
 import {
   USUARIOS_PRUEBA,
   PERSONAS_PRUEBA,
@@ -63,8 +64,10 @@ export default function AjustesPrivados({
   avisar: (m: string) => void;
 }) {
   const { usuario, esApostol, config } = useAuth();
-  const [claveLideres, setClaveLideres] = useState(config?.claveLideres || 'oasis');
-  const [claveApostol, setClaveApostol] = useState(config?.claveApostol || 'apostol');
+  const [nuevaClaveLideres, setNuevaClaveLideres] = useState('');
+  const [repetirClaveLideres, setRepetirClaveLideres] = useState('');
+  const [nuevaClaveApostol, setNuevaClaveApostol] = useState('');
+  const [repetirClaveApostol, setRepetirClaveApostol] = useState('');
   const [nombreIglesia, setNombreIglesia] = useState(
     config?.nombreIglesia || 'Centro de Alabanza Oasis',
   );
@@ -79,10 +82,8 @@ export default function AjustesPrivados({
   const [auditorias, setAuditorias] = useState<RegistroAuditoria[]>([]);
 
   useEffect(() => {
-    if (config) {
-      setClaveLideres(config.claveLideres || 'oasis');
-      setClaveApostol(config.claveApostol || 'apostol');
-      setNombreIglesia(config.nombreIglesia || 'Centro de Alabanza Oasis');
+    if (config?.nombreIglesia) {
+      setNombreIglesia(config.nombreIglesia);
     }
   }, [config]);
 
@@ -93,18 +94,85 @@ export default function AjustesPrivados({
 
   async function guardarClaves(e: React.FormEvent) {
     e.preventDefault();
-    if (!claveLideres.trim() || !claveApostol.trim()) {
-      avisar('Las contraseñas no pueden estar vacías.');
+
+    const quiereCambiarLideres =
+      nuevaClaveLideres.length > 0 || repetirClaveLideres.length > 0;
+    const quiereCambiarApostol =
+      nuevaClaveApostol.length > 0 || repetirClaveApostol.length > 0;
+
+    if (quiereCambiarLideres && nuevaClaveLideres !== repetirClaveLideres) {
+      avisar('Las contraseñas de Líderes no coinciden.');
+      return;
+    }
+
+    if (quiereCambiarApostol && nuevaClaveApostol !== repetirClaveApostol) {
+      avisar('Las contraseñas del Apóstol no coinciden.');
       return;
     }
 
     setGuardandoConfig(true);
     try {
-      await store.guardarConfiguracion({
-        claveLideres: claveLideres.trim(),
-        claveApostol: claveApostol.trim(),
+      const cambiosStore: Partial<Configuracion> = {
         nombreIglesia: nombreIglesia.trim(),
-      });
+      };
+      const cambiosFirestore: Record<string, any> = {
+        nombreIglesia: nombreIglesia.trim(),
+      };
+
+      if (quiereCambiarLideres) {
+        const hash = await cifrarClave(nuevaClaveLideres);
+        cambiosStore.hashLideres = hash;
+        delete (cambiosStore as any).claveLideres;
+        cambiosFirestore.hashLideres = hash;
+        cambiosFirestore.claveLideres = deleteField();
+      }
+
+      if (quiereCambiarApostol) {
+        const hash = await cifrarClave(nuevaClaveApostol);
+        cambiosStore.hashApostol = hash;
+        delete (cambiosStore as any).claveApostol;
+        cambiosFirestore.hashApostol = hash;
+        cambiosFirestore.claveApostol = deleteField();
+      }
+
+      if (db) {
+        try {
+          await setDoc(doc(db, 'configuracion', 'acceso'), cambiosFirestore, {
+            merge: true,
+          });
+        } catch (err) {
+          console.warn('Error al guardar configuración en Firestore:', err);
+        }
+      }
+
+      await store.guardarConfiguracion(cambiosStore);
+
+      try {
+        const clavesLocalStorage = [
+          'oasis-datos-demo',
+          'oasis-seguimiento-demo-v1',
+        ];
+        for (const k of clavesLocalStorage) {
+          const crudo = localStorage.getItem(k);
+          if (crudo) {
+            const d = JSON.parse(crudo);
+            if (d?.configuracion) {
+              d.configuracion.nombreIglesia = nombreIglesia.trim();
+              if (cambiosStore.hashLideres) {
+                d.configuracion.hashLideres = cambiosStore.hashLideres;
+                delete d.configuracion.claveLideres;
+              }
+              if (cambiosStore.hashApostol) {
+                d.configuracion.hashApostol = cambiosStore.hashApostol;
+                delete d.configuracion.claveApostol;
+              }
+              localStorage.setItem(k, JSON.stringify(d));
+            }
+          }
+        }
+      } catch {
+        /* sin almacenamiento */
+      }
 
       if (usuario) {
         await store.registrarAuditoria({
@@ -115,6 +183,11 @@ export default function AjustesPrivados({
           fecha: new Date().toISOString(),
         });
       }
+
+      setNuevaClaveLideres('');
+      setRepetirClaveLideres('');
+      setNuevaClaveApostol('');
+      setRepetirClaveApostol('');
 
       avisar('Configuración y contraseñas guardadas con éxito.');
     } catch (err: any) {
@@ -590,18 +663,45 @@ export default function AjustesPrivados({
             />
           </div>
 
+          <p
+            style={{
+              margin: '0 0 16px',
+              fontSize: '0.88rem',
+              color: 'var(--tinta-2, #64748b)',
+              lineHeight: 1.4,
+            }}
+          >
+            Los campos vacíos significan que esa contraseña se queda como está. Solo se cambia lo que se escriba.
+          </p>
+
           <CampoClave
             etiqueta="Contraseña para Líderes"
-            valor={claveLideres}
-            onChange={setClaveLideres}
+            valor={nuevaClaveLideres}
+            onChange={setNuevaClaveLideres}
+            placeholder="Escribe la nueva contraseña"
             ayuda="Los líderes ingresan con su nombre y esta contraseña compartida."
           />
 
           <CampoClave
+            etiqueta="Repite la nueva contraseña"
+            valor={repetirClaveLideres}
+            onChange={setRepetirClaveLideres}
+            placeholder="Repite la nueva contraseña"
+          />
+
+          <CampoClave
             etiqueta="Contraseña privada del Apóstol"
-            valor={claveApostol}
-            onChange={setClaveApostol}
+            valor={nuevaClaveApostol}
+            onChange={setNuevaClaveApostol}
+            placeholder="Escribe la nueva contraseña"
             ayuda="Tu contraseña maestra para acceder a métricas, líderes y ajustes."
+          />
+
+          <CampoClave
+            etiqueta="Repite la nueva contraseña"
+            valor={repetirClaveApostol}
+            onChange={setRepetirClaveApostol}
+            placeholder="Repite la nueva contraseña"
           />
 
           <button

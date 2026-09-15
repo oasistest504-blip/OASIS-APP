@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useDatos } from '../context/DatosContext';
 import { store } from '../lib/store';
 import { db } from '../lib/firebase';
-import { doc, setDoc, deleteField } from 'firebase/firestore';
+import { collection, doc, getDocs, query, setDoc, where, deleteField } from 'firebase/firestore';
 import type { RegistroAuditoria, Configuracion } from '../lib/types';
 import { cifrarClave } from '../lib/claves';
 import { CampoClave, hace } from '../components/UI';
@@ -24,6 +25,7 @@ export default function AjustesPrivados({
   avisar: (m: string) => void;
 }) {
   const { usuario, esApostol, config } = useAuth();
+  const { personas } = useDatos();
   const [nuevaClaveLideres, setNuevaClaveLideres] = useState('');
   const [repetirClaveLideres, setRepetirClaveLideres] = useState('');
   const [nuevaClaveApostol, setNuevaClaveApostol] = useState('');
@@ -33,6 +35,7 @@ export default function AjustesPrivados({
   );
 
   const [guardandoConfig, setGuardandoConfig] = useState(false);
+  const [guardandoPrueba, setGuardandoPrueba] = useState(false);
   const [auditorias, setAuditorias] = useState<RegistroAuditoria[]>([]);
 
   useEffect(() => {
@@ -148,6 +151,71 @@ export default function AjustesPrivados({
       avisar(`Error al guardar: ${err?.message ?? 'error'}`);
     } finally {
       setGuardandoConfig(false);
+    }
+  }
+
+  async function colocarDatosPrueba() {
+    if (guardandoPrueba) return;
+    setGuardandoPrueba(true);
+
+    try {
+      let yaExiste = personas.some(
+        (p) => p.nombre.trim().toLowerCase() === 'marta elena quintero'.toLowerCase(),
+      );
+
+      if (!yaExiste && !store.modoDemo && db) {
+        try {
+          const q = query(
+            collection(db, 'personas'),
+            where('nombre', '==', 'Marta Elena Quintero'),
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            yaExiste = true;
+          }
+        } catch {
+          // Si falla la lectura directa se confía en la lista de personas
+        }
+      }
+
+      if (yaExiste) {
+        avisar('Los datos de prueba ya estaban puestos.');
+        return;
+      }
+
+      const ahora = new Date().toISOString();
+      const fechaHace8Dias = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+
+      await store.crearPersona({
+        nombre: 'Marta Elena Quintero',
+        telefonoE164: '573000000097',
+        etapa: 'Nuevo',
+        banderas: [],
+        origen: 'Otro',
+        liderAsignadoId: null,
+        liderAsignadoNombre: null,
+        consentimiento: {
+          otorgado: true,
+          fecha: ahora,
+          medio: 'Formulario de bienvenida firmado',
+          registradoPorUid: usuario?.id ?? 'apostol',
+        },
+        notas: '',
+        motivoOracion: null,
+        fechaIngreso: fechaHace8Dias,
+        ultimoContacto: null,
+        ventanaAbiertaHasta: null,
+        sinRespuestaConsecutivos: 0,
+        pasosEnviados: [],
+        creadoPorUid: usuario?.id ?? 'apostol',
+        esPrueba: true,
+      });
+
+      avisar('Se agregó a Marta Elena Quintero.');
+    } catch (err: any) {
+      avisar(`Error al colocar datos de prueba: ${err?.message ?? 'error'}`);
+    } finally {
+      setGuardandoPrueba(false);
     }
   }
 
@@ -290,9 +358,10 @@ export default function AjustesPrivados({
                 border: 'none',
                 fontWeight: 600,
               }}
-              onClick={() => {}}
+              onClick={colocarDatosPrueba}
+              disabled={guardandoPrueba}
             >
-              Colocar datos de prueba
+              {guardandoPrueba ? 'Colocando datos de prueba…' : 'Colocar datos de prueba'}
             </button>
           </div>
         )}

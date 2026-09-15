@@ -20,9 +20,11 @@ export default function Login() {
   const [claveApostol, setClaveApostol] = useState('');
   const [claveLider, setClaveLider] = useState('');
   const [error, setError] = useState('');
+  const [comprobando, setComprobando] = useState(false);
 
-  function ingresarComoApostol(e?: React.FormEvent) {
+  async function ingresarComoApostol(e?: React.FormEvent) {
     if (e) e.preventDefault();
+    if (comprobando) return;
     setError('');
     limpiarSesionExpirada();
     const claveAProbar = claveApostol.trim();
@@ -30,16 +32,22 @@ export default function Login() {
       setError('Escribe la contraseña de Apóstol.');
       return;
     }
-    const problema = entrarComoApostol(claveAProbar);
-    if (problema) {
-      setError(problema);
-    } else {
-      setClaveApostol('');
+    setComprobando(true);
+    try {
+      const problema = await entrarComoApostol(claveAProbar);
+      if (problema) {
+        setError(problema);
+      } else {
+        setClaveApostol('');
+      }
+    } finally {
+      setComprobando(false);
     }
   }
 
-  function ingresarComoLider(e?: React.FormEvent) {
+  async function ingresarComoLider(e?: React.FormEvent) {
     if (e) e.preventDefault();
+    if (comprobando) return;
     setError('');
     limpiarSesionExpirada();
     const claveAProbar = claveLider.trim();
@@ -47,11 +55,16 @@ export default function Login() {
       setError('Escribe la contraseña de Líderes.');
       return;
     }
-    const problema = entrarComoLider(claveAProbar);
-    if (problema) {
-      setError(problema);
-    } else {
-      setClaveLider('');
+    setComprobando(true);
+    try {
+      const problema = await entrarComoLider(claveAProbar);
+      if (problema) {
+        setError(problema);
+      } else {
+        setClaveLider('');
+      }
+    } finally {
+      setComprobando(false);
     }
   }
 
@@ -166,8 +179,8 @@ export default function Login() {
                       placeholder="Contraseña del Apóstol"
                     />
                     <div style={{ marginTop: 14 }}>
-                      <button className="btn ancho" type="submit">
-                        Entrar al Panel General
+                      <button className="btn ancho" type="submit" disabled={comprobando}>
+                        {comprobando ? 'Comprobando...' : 'Entrar al Panel General'}
                       </button>
                     </div>
                   </form>
@@ -190,8 +203,8 @@ export default function Login() {
                       placeholder="Contraseña del equipo"
                     />
                     <div style={{ marginTop: 14 }}>
-                      <button className="btn secundario ancho" type="submit">
-                        Continuar como Líder
+                      <button className="btn secundario ancho" type="submit" disabled={comprobando}>
+                        {comprobando ? 'Comprobando...' : 'Continuar como Líder'}
                       </button>
                     </div>
                   </form>

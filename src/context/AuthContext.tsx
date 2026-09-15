@@ -20,9 +20,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { doc, setDoc, deleteField } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { store } from '../lib/store';
 import { CONFIGURACION_INICIAL } from '../lib/store';
 import type { Configuracion, Usuario } from '../lib/types';
+import { cifrarClave, verificarClave } from '../lib/claves';
 
 /** En qué punto de la entrada va la persona. */
 export type PasoEntrada = 'clave' | 'elegirNombre' | 'dentro';
@@ -51,9 +54,9 @@ interface ValorAuth {
     rolDestino: 'apostol' | 'lider',
   ) => Promise<void>;
   /** Devuelve el error, o cadena vacía si la clave era correcta. */
-  entrarConClave: (clave: string, rol?: 'apostol' | 'lider') => string;
-  entrarComoApostol: (clave: string) => string;
-  entrarComoLider: (clave: string) => string;
+  entrarConClave: (clave: string, rol?: 'apostol' | 'lider') => Promise<string>;
+  entrarComoApostol: (clave: string) => Promise<string>;
+  entrarComoLider: (clave: string) => Promise<string>;
   elegirQuienSoy: (id: string) => void;
   volverAClave: () => void;
   salir: () => void;
@@ -236,6 +239,86 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     [usuarios],
   );
 
+  async function migrarClaveApostol(clave: string): Promise<string> {
+    const nuevoHash = await cifrarClave(clave);
+    if (db) {
+      try {
+        await setDoc(
+          doc(db, 'configuracion', 'acceso'),
+          {
+            hashApostol: nuevoHash,
+            claveApostol: deleteField(),
+          },
+          { merge: true },
+        );
+      } catch (err) {
+        console.warn('Error al migrar hashApostol en Firestore:', err);
+      }
+    }
+    await store.guardarConfiguracion({
+      hashApostol: nuevoHash,
+    });
+    try {
+      const crudo = localStorage.getItem('oasis-datos-demo');
+      if (crudo) {
+        const d = JSON.parse(crudo);
+        if (d?.configuracion) {
+          d.configuracion.hashApostol = nuevoHash;
+          delete d.configuracion.claveApostol;
+          localStorage.setItem('oasis-datos-demo', JSON.stringify(d));
+        }
+      }
+    } catch {
+      /* sin almacenamiento */
+    }
+    setConfiguracion((prev) => {
+      const copia = { ...prev, hashApostol: nuevoHash };
+      delete (copia as any).claveApostol;
+      return copia;
+    });
+    return nuevoHash;
+  }
+
+  async function migrarClaveLideres(clave: string): Promise<string> {
+    const nuevoHash = await cifrarClave(clave);
+    if (db) {
+      try {
+        await setDoc(
+          doc(db, 'configuracion', 'acceso'),
+          {
+            hashLideres: nuevoHash,
+            claveLideres: deleteField(),
+          },
+          { merge: true },
+        );
+      } catch (err) {
+        console.warn('Error al migrar hashLideres en Firestore:', err);
+      }
+    }
+    await store.guardarConfiguracion({
+      hashLideres: nuevoHash,
+    });
+    try {
+      const crudo = localStorage.getItem('oasis-datos-demo');
+      if (crudo) {
+        const d = JSON.parse(crudo);
+        if (d?.configuracion) {
+          d.configuracion.hashLideres = nuevoHash;
+          delete d.configuracion.claveLideres;
+          localStorage.setItem('oasis-datos-demo', JSON.stringify(d));
+        }
+      }
+    } catch {
+      /* sin almacenamiento */
+    }
+    setConfiguracion((prev) => {
+      const copia = { ...prev, hashLideres: nuevoHash };
+      delete (copia as any).claveLideres;
+      return copia;
+    });
+    return nuevoHash;
+  }
+
   const valor: ValorAuth = {
     usuario,
     usuarios,
@@ -297,12 +380,20 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       }
     },
 
-    entrarComoApostol(clave: string): string {
+    async entrarComoApostol(clave: string): Promise<string> {
       setSesionExpirada(false);
       const c = normalizar(clave);
       if (!c) return 'Escribe la contraseña de Apóstol.';
 
-      if (c === normalizar(configuracion.claveApostol)) {
+      let acertoApostol = false;
+      if (configuracion.hashApostol) {
+        acertoApostol = await verificarClave(clave, configuracion.hashApostol);
+      } else if (configuracion.claveApostol && c === normalizar(configuracion.claveApostol)) {
+        acertoApostol = true;
+        await migrarClaveApostol(clave);
+      }
+
+      if (acertoApostol) {
         const apostol =
           usuarios.find((u) => u.rol === 'apostol' && u.activo) ||
           usuarios.find((u) => u.rol === 'apostol');
@@ -312,24 +403,29 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
           guardarSesion({ usuarioId: apostol.id, esApostol: true });
           return '';
         }
-        store
-          .crearUsuario({
-            nombre: 'Apóstol',
-            rol: 'apostol',
-            activo: true,
-            capacidadSemanal: 10,
-            creadoEn: new Date().toISOString(),
-          })
-          .then((id) => {
-            setUsuarioId(id);
-            setPaso('dentro');
-            guardarSesion({ usuarioId: id, esApostol: true });
-          });
+        const id = await store.crearUsuario({
+          nombre: 'Apóstol',
+          rol: 'apostol',
+          activo: true,
+          capacidadSemanal: 10,
+          creadoEn: new Date().toISOString(),
+        });
+        setUsuarioId(id);
+        setPaso('dentro');
+        guardarSesion({ usuarioId: id, esApostol: true });
         return '';
       }
 
       // Si por error escribió la clave de líderes en la casilla del Apóstol:
-      if (c === normalizar(configuracion.claveLideres)) {
+      let acertoLider = false;
+      if (configuracion.hashLideres) {
+        acertoLider = await verificarClave(clave, configuracion.hashLideres);
+      } else if (configuracion.claveLideres && c === normalizar(configuracion.claveLideres)) {
+        acertoLider = true;
+        await migrarClaveLideres(clave);
+      }
+
+      if (acertoLider) {
         setPaso('elegirNombre');
         return '';
       }
@@ -337,17 +433,31 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       return 'Contraseña de Apóstol incorrecta.';
     },
 
-    entrarComoLider(clave: string): string {
+    async entrarComoLider(clave: string): Promise<string> {
       setSesionExpirada(false);
       const c = normalizar(clave);
       if (!c) return 'Escribe la contraseña de Líderes.';
 
       // Si por error escribió la clave del Apóstol en la casilla de líderes:
-      if (c === normalizar(configuracion.claveApostol)) {
-        return valor.entrarComoApostol(clave);
+      let acertoApostol = false;
+      if (configuracion.hashApostol) {
+        acertoApostol = await verificarClave(clave, configuracion.hashApostol);
+      } else if (configuracion.claveApostol && c === normalizar(configuracion.claveApostol)) {
+        acertoApostol = true;
+      }
+      if (acertoApostol) {
+        return await valor.entrarComoApostol(clave);
       }
 
-      if (c === normalizar(configuracion.claveLideres)) {
+      let acertoLider = false;
+      if (configuracion.hashLideres) {
+        acertoLider = await verificarClave(clave, configuracion.hashLideres);
+      } else if (configuracion.claveLideres && c === normalizar(configuracion.claveLideres)) {
+        acertoLider = true;
+        await migrarClaveLideres(clave);
+      }
+
+      if (acertoLider) {
         setPaso('elegirNombre');
         return '';
       }
@@ -355,19 +465,31 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       return 'Contraseña de Líderes incorrecta.';
     },
 
-    entrarConClave(clave: string, rol?: 'apostol' | 'lider'): string {
-      if (rol === 'apostol') return valor.entrarComoApostol(clave);
-      if (rol === 'lider') return valor.entrarComoLider(clave);
+    async entrarConClave(clave: string, rol?: 'apostol' | 'lider'): Promise<string> {
+      if (rol === 'apostol') return await valor.entrarComoApostol(clave);
+      if (rol === 'lider') return await valor.entrarComoLider(clave);
 
       const c = normalizar(clave);
       if (!c) return 'Escribe la contraseña.';
 
-      if (c === normalizar(configuracion.claveApostol)) {
-        return valor.entrarComoApostol(clave);
+      let acertoApostol = false;
+      if (configuracion.hashApostol) {
+        acertoApostol = await verificarClave(clave, configuracion.hashApostol);
+      } else if (configuracion.claveApostol && c === normalizar(configuracion.claveApostol)) {
+        acertoApostol = true;
+      }
+      if (acertoApostol) {
+        return await valor.entrarComoApostol(clave);
       }
 
-      if (c === normalizar(configuracion.claveLideres)) {
-        return valor.entrarComoLider(clave);
+      let acertoLider = false;
+      if (configuracion.hashLideres) {
+        acertoLider = await verificarClave(clave, configuracion.hashLideres);
+      } else if (configuracion.claveLideres && c === normalizar(configuracion.claveLideres)) {
+        acertoLider = true;
+      }
+      if (acertoLider) {
+        return await valor.entrarComoLider(clave);
       }
 
       return 'Esa contraseña no es. Pídesela al Apóstol.';

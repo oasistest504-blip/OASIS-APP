@@ -73,19 +73,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. Navegación principal (HTML): Network-First para ver siempre la última versión
-  if (req.mode === 'navigate') {
+  // 1. Documento HTML (Petición de navegación): Network-First
+  // Cuando el navegador pide la página en sí, intenta primero traerla de la red.
+  // Guarda la respuesta nueva en la caché para seguir sirviendo sin internet y usa la copia guardada solo si la red falla.
+  const esNavegacion =
+    req.mode === 'navigate' ||
+    req.destination === 'document' ||
+    (req.headers.get('accept') && req.headers.get('accept').includes('text/html'));
+
+  if (esNavegacion) {
     event.respondWith(
       fetch(req)
         .then((respuestaRed) => {
           if (respuestaRed && respuestaRed.status === 200) {
             const clon = respuestaRed.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, clon));
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(req, clon);
+              cache.put('/index.html', respuestaRed.clone());
+            });
           }
           return respuestaRed;
         })
         .catch(() => {
-          // Si no hay conexión, servir el index.html guardado
+          // Si la red falla, usar la copia guardada en la caché
           return caches.match(req).then((res) => {
             return res || caches.match('/index.html') || caches.match('/');
           });

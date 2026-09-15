@@ -24,7 +24,7 @@ export default function AjustesPrivados({
   ir: (v: Vista, id?: string) => void;
   avisar: (m: string) => void;
 }) {
-  const { usuario, esApostol, config } = useAuth();
+  const { usuario, usuarios, esApostol, config } = useAuth();
   const { personas } = useDatos();
   const [nuevaClaveLideres, setNuevaClaveLideres] = useState('');
   const [repetirClaveLideres, setRepetirClaveLideres] = useState('');
@@ -159,59 +159,141 @@ export default function AjustesPrivados({
     setGuardandoPrueba(true);
 
     try {
-      let yaExiste = personas.some(
-        (p) => p.nombre.trim().toLowerCase() === 'marta elena quintero'.toLowerCase(),
-      );
+      async function verificarExiste(nombreBuscado: string): Promise<boolean> {
+        const normalizado = nombreBuscado.trim().toLowerCase();
+        const enEstado = personas.some((p) => p.nombre.trim().toLowerCase() === normalizado);
+        if (enEstado) return true;
 
-      if (!yaExiste && !store.modoDemo && db) {
-        try {
-          const q = query(
-            collection(db, 'personas'),
-            where('nombre', '==', 'Marta Elena Quintero'),
-          );
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            yaExiste = true;
+        if (!store.modoDemo && db) {
+          try {
+            const q = query(
+              collection(db, 'personas'),
+              where('nombre', '==', nombreBuscado),
+            );
+            const snap = await getDocs(q);
+            if (!snap.empty) return true;
+          } catch {
+            // Si falla la consulta a Firestore, nos guiamos por la memoria local
           }
-        } catch {
-          // Si falla la lectura directa se confía en la lista de personas
         }
+        return false;
       }
 
-      if (yaExiste) {
-        avisar('Los datos de prueba ya estaban puestos.');
-        return;
-      }
-
+      let agregadas = 0;
       const ahora = new Date().toISOString();
-      const fechaHace8Dias = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
 
-      await store.crearPersona({
-        nombre: 'Marta Elena Quintero',
-        telefonoE164: '573000000097',
-        etapa: 'Nuevo',
-        banderas: [],
-        origen: 'Otro',
-        liderAsignadoId: null,
-        liderAsignadoNombre: null,
-        consentimiento: {
-          otorgado: true,
-          fecha: ahora,
-          medio: 'Formulario de bienvenida firmado',
-          registradoPorUid: usuario?.id ?? 'apostol',
-        },
-        notas: '',
-        motivoOracion: null,
-        fechaIngreso: fechaHace8Dias,
-        ultimoContacto: null,
-        ventanaAbiertaHasta: null,
-        sinRespuestaConsecutivos: 0,
-        pasosEnviados: [],
-        creadoPorUid: usuario?.id ?? 'apostol',
-        esPrueba: true,
-      });
+      // 1. Marta Elena Quintero
+      const existeMarta = await verificarExiste('Marta Elena Quintero');
+      if (!existeMarta) {
+        const fechaHace8Dias = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+        await store.crearPersona({
+          nombre: 'Marta Elena Quintero',
+          telefonoE164: '573000000097',
+          etapa: 'Nuevo',
+          banderas: [],
+          origen: 'Otro',
+          liderAsignadoId: null,
+          liderAsignadoNombre: null,
+          consentimiento: {
+            otorgado: true,
+            fecha: ahora,
+            medio: 'Formulario de bienvenida firmado',
+            registradoPorUid: usuario?.id ?? 'apostol',
+          },
+          notas: '',
+          motivoOracion: null,
+          fechaIngreso: fechaHace8Dias,
+          ultimoContacto: null,
+          ventanaAbiertaHasta: null,
+          sinRespuestaConsecutivos: 0,
+          pasosEnviados: [],
+          creadoPorUid: usuario?.id ?? 'apostol',
+          esPrueba: true,
+        });
+        agregadas++;
+      }
 
-      avisar('Se agregó a Marta Elena Quintero.');
+      // 2. Hernán Darío Loaiza
+      const existeHernan = await verificarExiste('Hernán Darío Loaiza');
+      if (!existeHernan) {
+        // Buscar el identificador real de Diana Osorio en la base de datos
+        let dianaId: string | null = null;
+        let dianaNombre: string | null = 'Diana Osorio';
+
+        if (!store.modoDemo && db) {
+          try {
+            const qLider = query(
+              collection(db, 'usuarios'),
+              where('nombre', '==', 'Diana Osorio'),
+            );
+            const snapLider = await getDocs(qLider);
+            if (!snapLider.empty) {
+              dianaId = snapLider.docs[0].id;
+              dianaNombre = (snapLider.docs[0].data() as any).nombre || 'Diana Osorio';
+            }
+          } catch (err) {
+            console.warn('Error buscando a Diana Osorio en Firestore:', err);
+          }
+        }
+
+        if (!dianaId) {
+          const liderEncontrado = usuarios.find(
+            (u) => u.nombre.trim().toLowerCase() === 'diana osorio',
+          );
+          if (liderEncontrado) {
+            dianaId = liderEncontrado.id;
+            dianaNombre = liderEncontrado.nombre;
+          }
+        }
+
+        if (!dianaId && !store.modoDemo && db) {
+          try {
+            const snapTodos = await getDocs(collection(db, 'usuarios'));
+            const docEncontrado = snapTodos.docs.find(
+              (d) => (d.data() as any)?.nombre?.trim()?.toLowerCase() === 'diana osorio',
+            );
+            if (docEncontrado) {
+              dianaId = docEncontrado.id;
+              dianaNombre = (docEncontrado.data() as any).nombre || 'Diana Osorio';
+            }
+          } catch {}
+        }
+
+        const fechaHace30Dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        await store.crearPersona({
+          nombre: 'Hernán Darío Loaiza',
+          telefonoE164: '573000000096',
+          etapa: 'Nuevo',
+          banderas: [],
+          origen: 'Redes sociales',
+          liderAsignadoId: dianaId,
+          liderAsignadoNombre: dianaNombre,
+          consentimiento: {
+            otorgado: false,
+            fecha: ahora,
+            medio: 'No autorizó contacto',
+            registradoPorUid: usuario?.id ?? 'apostol',
+          },
+          notas: '',
+          motivoOracion: null,
+          fechaIngreso: fechaHace30Dias,
+          ultimoContacto: null,
+          ventanaAbiertaHasta: null,
+          sinRespuestaConsecutivos: 0,
+          pasosEnviados: [],
+          creadoPorUid: usuario?.id ?? 'apostol',
+          esPrueba: true,
+        });
+        agregadas++;
+      }
+
+      if (agregadas === 0) {
+        avisar('Se agregaron 0 personas (los datos de prueba ya estaban puestos).');
+      } else if (agregadas === 1) {
+        avisar('Se agregó 1 persona.');
+      } else {
+        avisar(`Se agregaron ${agregadas} personas.`);
+      }
     } catch (err: any) {
       avisar(`Error al colocar datos de prueba: ${err?.message ?? 'error'}`);
     } finally {

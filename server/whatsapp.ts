@@ -11,6 +11,7 @@
 
 import { config, WHATSAPP_SIMULADO, urlGraph } from './config.js';
 import { guardarInteraccion } from './firebaseAdmin.js';
+import { PLANTILLAS } from '../src/lib/plantillas.js';
 
 export interface DestinoEnvio {
   personaId: string;
@@ -131,6 +132,17 @@ export async function enviarPlantilla(opciones: {
     urlMedia,
   } = opciones;
 
+  const defPlantilla =
+    PLANTILLAS[plantilla] ||
+    Object.values(PLANTILLAS).find((p) => p.nombre === plantilla);
+
+  const textoDesdePlantilla = defPlantilla
+    ? defPlantilla.vistaPrevia.replace(
+        /\{\{(\d+)\}\}/g,
+        (_, num) => variables[Number(num) - 1] ?? '',
+      )
+    : null;
+
   if (WHATSAPP_SIMULADO) {
     console.log(
       `[whatsapp:simulado] ${plantilla} -> ${telefono} ${variables.length ? `(${variables.join(', ')})` : ''}`,
@@ -141,7 +153,10 @@ export async function enviarPlantilla(opciones: {
         direccion: 'saliente',
         canal: 'whatsapp',
         plantilla,
-        texto: opciones.textoParaHistorial ?? `[simulado] plantilla ${plantilla}`,
+        texto:
+          (opciones.textoParaHistorial && opciones.textoParaHistorial.trim()
+            ? opciones.textoParaHistorial
+            : textoDesdePlantilla) ?? `[simulado] plantilla ${plantilla}`,
         estado: 'enviado',
       });
     }
@@ -169,7 +184,10 @@ export async function enviarPlantilla(opciones: {
       direccion: 'saliente',
       canal: 'whatsapp',
       plantilla,
-      texto: opciones.textoParaHistorial ?? `plantilla ${plantilla}`,
+      texto:
+        (opciones.textoParaHistorial && opciones.textoParaHistorial.trim()
+          ? opciones.textoParaHistorial
+          : textoDesdePlantilla) ?? `plantilla ${plantilla}`,
       mensajeIdMeta: resultado.id,
       estado: resultado.ok ? 'enviado' : 'fallido',
       error: resultado.error,

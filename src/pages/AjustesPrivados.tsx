@@ -1,17 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useDatos } from '../context/DatosContext';
-import { store, MODO_DEMO } from '../lib/store';
+import { store } from '../lib/store';
 import { db } from '../lib/firebase';
-import { collection, doc, addDoc, setDoc, deleteField } from 'firebase/firestore';
+import { doc, setDoc, deleteField } from 'firebase/firestore';
 import type { RegistroAuditoria, Configuracion } from '../lib/types';
 import { cifrarClave } from '../lib/claves';
-import {
-  USUARIOS_PRUEBA,
-  PERSONAS_PRUEBA,
-  TAREAS_PRUEBA,
-  INTERACCIONES_PRUEBA,
-} from '../lib/datosPrueba';
 import { CampoClave, hace } from '../components/UI';
 import {
   IconoAjustes,
@@ -40,8 +33,6 @@ export default function AjustesPrivados({
   );
 
   const [guardandoConfig, setGuardandoConfig] = useState(false);
-  const [sembrando, setSembrando] = useState(false);
-  const [cargandoPrueba, setCargandoPrueba] = useState(false);
   const [auditorias, setAuditorias] = useState<RegistroAuditoria[]>([]);
 
   useEffect(() => {
@@ -160,116 +151,6 @@ export default function AjustesPrivados({
     }
   }
 
-  async function sembrarDatos() {
-    setSembrando(true);
-    try {
-      await store.sembrarDatosEjemplo();
-      avisar('Líderes y datos de ejemplo restaurados con éxito.');
-    } catch (err: any) {
-      avisar(`Error: ${err?.message ?? 'error'}`);
-    } finally {
-      setSembrando(false);
-    }
-  }
-
-  async function cargarDatosPrueba() {
-    setCargandoPrueba(true);
-    try {
-      let uCreados = 0;
-      let pCreadas = 0;
-      let tCreadas = 0;
-      let iCreadas = 0;
-
-      const mapaUsuarios: Record<string, string> = {};
-      const mapaPersonas: Record<string, string> = {};
-
-      // 1. Guardar líderes y apóstol
-      for (const u of USUARIOS_PRUEBA) {
-        const { id, ...restoUsuario } = u;
-        const nuevoId = await store.crearUsuario({
-          ...restoUsuario,
-          esPrueba: true,
-        });
-        mapaUsuarios[id] = nuevoId;
-        uCreados++;
-      }
-
-      // 2. Guardar personas
-      for (const p of PERSONAS_PRUEBA) {
-        const { id, ...restoPersona } = p;
-        const liderIdReal = restoPersona.liderAsignadoId
-          ? (mapaUsuarios[restoPersona.liderAsignadoId] || restoPersona.liderAsignadoId)
-          : null;
-        const nuevoId = await store.crearPersona({
-          ...restoPersona,
-          liderAsignadoId: liderIdReal,
-          creadoPorUid: liderIdReal || (usuario?.id ?? 'sistema'),
-          esPrueba: true,
-        });
-        mapaPersonas[id] = nuevoId;
-        pCreadas++;
-      }
-
-      // 3. Guardar tareas
-      for (const t of TAREAS_PRUEBA) {
-        const { id, ...restoTarea } = t;
-        const personaIdReal = mapaPersonas[restoTarea.personaId] || restoTarea.personaId;
-        const liderIdReal = restoTarea.liderId
-          ? (mapaUsuarios[restoTarea.liderId] || restoTarea.liderId)
-          : restoTarea.liderId;
-        await store.crearTarea({
-          ...restoTarea,
-          personaId: personaIdReal,
-          liderId: liderIdReal,
-          esPrueba: true,
-        });
-        tCreadas++;
-      }
-
-      // 4. Guardar interacciones
-      for (const i of INTERACCIONES_PRUEBA) {
-        const { id, ...restoInteraccion } = i;
-        const personaIdReal = mapaPersonas[restoInteraccion.personaId] || restoInteraccion.personaId;
-        const interaccionFinal = {
-          ...restoInteraccion,
-          personaId: personaIdReal,
-          esPrueba: true,
-        };
-
-        if (store.modoDemo) {
-          await store.agregarInteraccionLocal(interaccionFinal);
-        } else if (db) {
-          const limpia: Record<string, any> = {};
-          for (const [k, v] of Object.entries(interaccionFinal)) {
-            if (v !== undefined) limpia[k] = v;
-          }
-          await addDoc(collection(db, 'interacciones'), limpia);
-        }
-        iCreadas++;
-      }
-
-      const total = uCreados + pCreadas + tCreadas + iCreadas;
-      if (usuario) {
-        await store.registrarAuditoria({
-          uid: usuario.id,
-          nombre: usuario.nombre,
-          accion: 'cargó datos de prueba',
-          objetivo: 'Datos de prueba',
-          detalle: `Se crearon ${total} registros ficticios (${uCreados} líderes, ${pCreadas} personas, ${tCreadas} tareas y ${iCreadas} interacciones).`,
-          fecha: new Date().toISOString(),
-        });
-      }
-
-      avisar(
-        `Se crearon exitosamente ${total} registros de prueba (${uCreados} líderes, ${pCreadas} personas, ${tCreadas} tareas y ${iCreadas} interacciones).`,
-      );
-    } catch (err: any) {
-      avisar(`Error al cargar datos de prueba: ${err?.message ?? 'error'}`);
-    } finally {
-      setCargandoPrueba(false);
-    }
-  }
-
   return (
     <div style={{ paddingBottom: 30 }}>
       <div className="fila-entre" style={{ marginBottom: 10 }}>
@@ -364,40 +245,55 @@ export default function AjustesPrivados({
           >
             <IconoWhatsApp /> Ver estado y pruebas de WhatsApp
           </button>
-
-          <button
-            type="button"
-            className="btn fantasma ancho"
-            onClick={sembrarDatos}
-            disabled={sembrando}
-          >
-            {sembrando ? 'Restaurando…' : 'Restaurar datos de prueba / demo'}
-          </button>
         </div>
 
-        {/* Sección nueva: Datos de prueba (visible únicamente para el Apóstol) */}
+        {/* Bloque de datos ficticios de prueba visible solo para el Apóstol */}
         {esApostol && (
           <div
             style={{
-              marginTop: 18,
-              paddingTop: 16,
-              borderTop: '1px solid var(--borde, #e2e8f0)',
+              marginTop: 16,
+              padding: '14px 16px',
+              backgroundColor: '#fff7ed',
+              border: '1.5px solid #f97316',
+              borderRadius: 10,
             }}
           >
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 10px' }}>
-              Datos de prueba
+            <h3
+              style={{
+                fontSize: '0.92rem',
+                fontWeight: 700,
+                color: '#9a3412',
+                margin: '0 0 8px',
+                letterSpacing: '0.02em',
+              }}
+            >
+              DATOS FICTICIOS DE PRUEBA — NO TOCAR
             </h3>
 
-            <div className="pila" style={{ gap: 8 }}>
-              <button
-                type="button"
-                className="btn ancho"
-                onClick={cargarDatosPrueba}
-                disabled={cargandoPrueba}
-              >
-                {cargandoPrueba ? 'Cargando datos de prueba…' : 'Cargar datos de prueba'}
-              </button>
-            </div>
+            <p
+              style={{
+                fontSize: '0.86rem',
+                color: '#7c2d12',
+                margin: '0 0 14px',
+                lineHeight: 1.45,
+              }}
+            >
+              Estos datos son inventados y sirven para probar el funcionamiento de la app. No corresponden a ninguna persona real de la congregación.
+            </p>
+
+            <button
+              type="button"
+              className="btn ancho"
+              style={{
+                backgroundColor: '#ea580c',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 600,
+              }}
+              onClick={() => {}}
+            >
+              Colocar datos de prueba
+            </button>
           </div>
         )}
       </div>

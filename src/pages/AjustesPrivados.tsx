@@ -180,122 +180,148 @@ export default function AjustesPrivados({
       }
 
       let agregadas = 0;
+      let saltadas = 0;
+      const fallidas: { nombre: string; error: string }[] = [];
       const ahora = new Date().toISOString();
 
       // 1. Marta Elena Quintero
       const existeMarta = await verificarExiste('Marta Elena Quintero');
-      if (!existeMarta) {
-        const fechaHace8Dias = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
-        await store.crearPersona({
-          nombre: 'Marta Elena Quintero',
-          telefonoE164: '573000000097',
-          etapa: 'Nuevo',
-          banderas: [],
-          origen: 'Otro',
-          liderAsignadoId: null,
-          liderAsignadoNombre: null,
-          consentimiento: {
-            otorgado: true,
-            fecha: ahora,
-            medio: 'Formulario de bienvenida firmado',
-            registradoPorUid: usuario?.id ?? 'apostol',
-          },
-          notas: '',
-          motivoOracion: null,
-          fechaIngreso: fechaHace8Dias,
-          ultimoContacto: null,
-          ventanaAbiertaHasta: null,
-          sinRespuestaConsecutivos: 0,
-          pasosEnviados: [],
-          creadoPorUid: usuario?.id ?? 'apostol',
-          esPrueba: true,
-        });
-        agregadas++;
+      if (existeMarta) {
+        saltadas++;
+      } else {
+        try {
+          const fechaHace8Dias = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+          await store.crearPersona({
+            nombre: 'Marta Elena Quintero',
+            telefonoE164: '573000000097',
+            etapa: 'Nuevo',
+            banderas: [],
+            origen: 'Otro',
+            liderAsignadoId: null,
+            liderAsignadoNombre: null,
+            consentimiento: {
+              otorgado: true,
+              fecha: ahora,
+              medio: 'Formulario de bienvenida firmado',
+              registradoPorUid: usuario?.id ?? 'apostol',
+            },
+            notas: '',
+            motivoOracion: null,
+            fechaIngreso: fechaHace8Dias,
+            ultimoContacto: null,
+            ventanaAbiertaHasta: null,
+            sinRespuestaConsecutivos: 0,
+            pasosEnviados: [],
+            creadoPorUid: usuario?.id ?? 'apostol',
+            esPrueba: true,
+          });
+          agregadas++;
+        } catch (err: any) {
+          const mensaje = err?.message || String(err) || 'Error desconocido';
+          fallidas.push({ nombre: 'Marta Elena Quintero', error: mensaje });
+        }
       }
 
       // 2. Hernán Darío Loaiza
       const existeHernan = await verificarExiste('Hernán Darío Loaiza');
-      if (!existeHernan) {
-        // Buscar el identificador real de Diana Osorio en la base de datos
-        let dianaId: string | null = null;
-        let dianaNombre: string | null = 'Diana Osorio';
-
-        if (!store.modoDemo && db) {
-          try {
-            const qLider = query(
-              collection(db, 'usuarios'),
-              where('nombre', '==', 'Diana Osorio'),
-            );
-            const snapLider = await getDocs(qLider);
-            if (!snapLider.empty) {
-              dianaId = snapLider.docs[0].id;
-              dianaNombre = (snapLider.docs[0].data() as any).nombre || 'Diana Osorio';
-            }
-          } catch (err) {
-            console.warn('Error buscando a Diana Osorio en Firestore:', err);
-          }
-        }
-
-        if (!dianaId) {
-          const liderEncontrado = usuarios.find(
-            (u) => u.nombre.trim().toLowerCase() === 'diana osorio',
-          );
-          if (liderEncontrado) {
-            dianaId = liderEncontrado.id;
-            dianaNombre = liderEncontrado.nombre;
-          }
-        }
-
-        if (!dianaId && !store.modoDemo && db) {
-          try {
-            const snapTodos = await getDocs(collection(db, 'usuarios'));
-            const docEncontrado = snapTodos.docs.find(
-              (d) => (d.data() as any)?.nombre?.trim()?.toLowerCase() === 'diana osorio',
-            );
-            if (docEncontrado) {
-              dianaId = docEncontrado.id;
-              dianaNombre = (docEncontrado.data() as any).nombre || 'Diana Osorio';
-            }
-          } catch {}
-        }
-
-        const fechaHace30Dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        await store.crearPersona({
-          nombre: 'Hernán Darío Loaiza',
-          telefonoE164: '573000000096',
-          etapa: 'Nuevo',
-          banderas: [],
-          origen: 'Redes sociales',
-          liderAsignadoId: dianaId,
-          liderAsignadoNombre: dianaNombre,
-          consentimiento: {
-            otorgado: false,
-            fecha: ahora,
-            medio: 'No autorizó contacto',
-            registradoPorUid: usuario?.id ?? 'apostol',
-          },
-          notas: '',
-          motivoOracion: null,
-          fechaIngreso: fechaHace30Dias,
-          ultimoContacto: null,
-          ventanaAbiertaHasta: null,
-          sinRespuestaConsecutivos: 0,
-          pasosEnviados: [],
-          creadoPorUid: usuario?.id ?? 'apostol',
-          esPrueba: true,
-        });
-        agregadas++;
-      }
-
-      if (agregadas === 0) {
-        avisar('Se agregaron 0 personas (los datos de prueba ya estaban puestos).');
-      } else if (agregadas === 1) {
-        avisar('Se agregó 1 persona.');
+      if (existeHernan) {
+        saltadas++;
       } else {
-        avisar(`Se agregaron ${agregadas} personas.`);
+        try {
+          // Buscar el identificador real de Diana Osorio en la base de datos
+          let dianaId: string | null = null;
+          let dianaNombre: string | null = 'Diana Osorio';
+
+          if (!store.modoDemo && db) {
+            try {
+              const qLider = query(
+                collection(db, 'usuarios'),
+                where('nombre', '==', 'Diana Osorio'),
+              );
+              const snapLider = await getDocs(qLider);
+              if (!snapLider.empty) {
+                dianaId = snapLider.docs[0].id;
+                dianaNombre = (snapLider.docs[0].data() as any).nombre || 'Diana Osorio';
+              }
+            } catch (err) {
+              console.warn('Error buscando a Diana Osorio en Firestore:', err);
+            }
+          }
+
+          if (!dianaId) {
+            const liderEncontrado = usuarios.find(
+              (u) => u.nombre.trim().toLowerCase() === 'diana osorio',
+            );
+            if (liderEncontrado) {
+              dianaId = liderEncontrado.id;
+              dianaNombre = liderEncontrado.nombre;
+            }
+          }
+
+          if (!dianaId && !store.modoDemo && db) {
+            try {
+              const snapTodos = await getDocs(collection(db, 'usuarios'));
+              const docEncontrado = snapTodos.docs.find(
+                (d) => (d.data() as any)?.nombre?.trim()?.toLowerCase() === 'diana osorio',
+              );
+              if (docEncontrado) {
+                dianaId = docEncontrado.id;
+                dianaNombre = (docEncontrado.data() as any).nombre || 'Diana Osorio';
+              }
+            } catch {}
+          }
+
+          const fechaHace30Dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          await store.crearPersona({
+            nombre: 'Hernán Darío Loaiza',
+            telefonoE164: '573000000096',
+            etapa: 'Nuevo',
+            banderas: [],
+            origen: 'Redes sociales',
+            liderAsignadoId: dianaId,
+            liderAsignadoNombre: dianaNombre,
+            consentimiento: {
+              otorgado: false,
+              fecha: ahora,
+              medio: 'No autorizó contacto',
+              registradoPorUid: usuario?.id ?? 'apostol',
+            },
+            notas: '',
+            motivoOracion: null,
+            fechaIngreso: fechaHace30Dias,
+            ultimoContacto: null,
+            ventanaAbiertaHasta: null,
+            sinRespuestaConsecutivos: 0,
+            pasosEnviados: [],
+            creadoPorUid: usuario?.id ?? 'apostol',
+            esPrueba: true,
+          });
+          agregadas++;
+        } catch (err: any) {
+          const mensaje = err?.message || String(err) || 'Error desconocido';
+          fallidas.push({ nombre: 'Hernán Darío Loaiza', error: mensaje });
+        }
       }
+
+      const partes: string[] = [
+        agregadas === 1 ? '1 persona agregada' : `${agregadas} personas agregadas`,
+        saltadas === 1 ? '1 se saltó porque ya existía' : `${saltadas} se saltaron porque ya existían`,
+      ];
+
+      if (fallidas.length > 0) {
+        const detalleFallidas = fallidas
+          .map((f) => `${f.nombre}: ${f.error}`)
+          .join('; ');
+        partes.push(
+          `${fallidas.length === 1 ? '1 falló' : `${fallidas.length} fallaron`} (${detalleFallidas})`,
+        );
+      } else {
+        partes.push('0 fallaron');
+      }
+
+      avisar(partes.join('. ') + '.');
     } catch (err: any) {
-      avisar(`Error al colocar datos de prueba: ${err?.message ?? 'error'}`);
+      avisar(`Error inesperado al colocar datos de prueba: ${err?.message ?? 'error'}`);
     } finally {
       setGuardandoPrueba(false);
     }

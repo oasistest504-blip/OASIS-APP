@@ -171,6 +171,8 @@ export interface Configuracion {
   claveLideres: string;
   claveApostol: string;
   nombreIglesia: string;
+  hashApostol?: string;
+  hashLideres?: string;
 }
 
 export interface LecturaAgente {

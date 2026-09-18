@@ -45,16 +45,16 @@ export default function App() {
   const { usuario, esApostol, primeraVez, cargando, salir, config } = useAuth();
   const { personas, tareas } = useDatos();
 
-  const [vista, setVista] = useState<Vista>(esApostol ? 'panel' : 'inicio');
+  const [vista, setVista] = useState<Vista>(esApostol ? 'panel' : 'tareas');
   const [historialVistas, setHistorialVistas] = useState<Vista[]>([]);
   const [personaIdSeleccionada, setPersonaIdSeleccionada] = useState<string | undefined>(undefined);
   const [grupoDifusion, setGrupoDifusion] = useState<string | undefined>(undefined);
   const [mensajeAviso, setMensajeAviso] = useState<string | null>(null);
 
-  // Asegurar que al iniciar sesión como Apóstol siempre abra en Panel, y como Líder en Registrar/Tareas
+  // Asegurar que al iniciar sesión como Apóstol siempre abra en Panel, y como Líder en Tareas por defecto
   useEffect(() => {
     if (usuario) {
-      setVista(esApostol ? 'panel' : 'inicio');
+      setVista(esApostol ? 'panel' : 'tareas');
       setHistorialVistas([]);
       try {
         localStorage.setItem('oasis_accion_completada', 'true');
@@ -84,11 +84,11 @@ export default function App() {
       }
     }
     // Si no hay historial previo, volver a la pantalla principal correspondiente al rol
-    setVista(esApostol ? 'panel' : 'inicio');
+    setVista(esApostol ? 'panel' : 'tareas');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  const vistaPrincipal = esApostol ? 'panel' : 'inicio';
+  const vistaPrincipal = esApostol ? 'panel' : 'tareas';
   const mostrarBotonAtras = vista !== vistaPrincipal || historialVistas.length > 0;
 
   function avisar(mensaje: string) {
@@ -123,7 +123,6 @@ export default function App() {
       ];
     }
     return [
-      { id: 'inicio' as Vista, nombre: 'Registrar', Icono: IconoMas },
       {
         id: 'tareas' as Vista,
         nombre: 'Tareas',
@@ -131,6 +130,7 @@ export default function App() {
         globo: misTareasPendientes.length > 0 ? misTareasPendientes.length : undefined,
       },
       { id: 'personas' as Vista, nombre: 'Personas', Icono: IconoEquipo },
+      { id: 'inicio' as Vista, nombre: 'Registrar', Icono: IconoMas },
     ];
   }, [esApostol, totalVencidas, misTareasPendientes.length]);
 
@@ -173,7 +173,7 @@ export default function App() {
             )}
 
             <div
-              onClick={() => ir(esApostol ? 'panel' : 'inicio')}
+              onClick={() => ir(vistaPrincipal)}
               style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}
             >
               <LogoOasis tamano={32} conTexto={false} />

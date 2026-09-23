@@ -26,6 +26,7 @@ import { store } from '../lib/store';
 import { CONFIGURACION_INICIAL } from '../lib/store';
 import type { Configuracion, Usuario } from '../lib/types';
 import { cifrarClave, verificarClave } from '../lib/claves';
+import { LogoOasis } from '../components/LogoOasis';
 
 /** En qué punto de la entrada va la persona. */
 export type PasoEntrada = 'clave' | 'elegirNombre' | 'dentro';
@@ -41,12 +42,14 @@ interface ValorAuth {
   config?: Configuracion;
   cargando: boolean;
   paso: PasoEntrada;
-  /** true cuando no hay ningún usuario todavía: hay que instalar la app. */
+  /** true solo cuando la lectura terminó exitosamente y de verdad no hay ningún usuario */
   sinInstalar: boolean;
   primeraVez?: boolean;
   esApostol: boolean;
   sesionExpirada: boolean;
   limpiarSesionExpirada: () => void;
+  errorUsuarios?: boolean;
+  errorConexion?: boolean;
   /** Inicializa la app por primera vez creando la configuración y los usuarios iniciales */
   inicializarApp: (
     claveApostol: string,
@@ -132,9 +135,31 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true);
   const [usuariosLeidos, setUsuariosLeidos] = useState(false);
   const [sesionExpirada, setSesionExpirada] = useState(false);
+  const [errorUsuarios, setErrorUsuarios] = useState(false);
+
+  // Límite de espera de 10 segundos: si hay una sesión guardada pero los usuarios
+  // no han llegado desde la base de datos, dejamos de esperar y avisamos al usuario.
+  useEffect(() => {
+    if (!usuarioId || usuariosLeidos) {
+      return;
+    }
+
+    const temporizador = setTimeout(() => {
+      if (!usuariosLeidos) {
+        setErrorUsuarios(true);
+      }
+    }, 10000);
+
+    return () => clearTimeout(temporizador);
+  }, [usuarioId, usuariosLeidos]);
 
   useEffect(() => {
-    return store.observarUsuarios((lista) => {
+    return store.observarUsuarios((lista, error) => {
+      if (error) {
+        setErrorUsuarios(true);
+        return;
+      }
+      setErrorUsuarios(false);
       setUsuarios(lista);
       setUsuariosLeidos(true);
     });
@@ -325,13 +350,15 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     lideres,
     configuracion,
     config: configuracion,
-    cargando: cargando || (!!usuarioId && !usuariosLeidos),
+    cargando: cargando || (!!usuarioId && !usuariosLeidos && !errorUsuarios),
     paso,
-    sinInstalar: usuariosLeidos && usuarios.length === 0,
-    primeraVez: usuariosLeidos && usuarios.length === 0,
+    sinInstalar: !errorUsuarios && usuariosLeidos && usuarios.length === 0,
+    primeraVez: !errorUsuarios && usuariosLeidos && usuarios.length === 0,
     esApostol: usuario?.rol === 'apostol',
     sesionExpirada,
     limpiarSesionExpirada: () => setSesionExpirada(false),
+    errorUsuarios,
+    errorConexion: errorUsuarios,
 
     async inicializarApp(
       claveApostol: string,
@@ -514,6 +541,97 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       guardarSesion(null);
     },
   };
+
+  // Si ocurrió un error al obtener usuarios de la base de datos
+  if (errorUsuarios) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px 16px',
+          background: 'var(--fondo, #f8fafc)',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 420,
+            width: '100%',
+            background: 'var(--blanco, #ffffff)',
+            borderRadius: 16,
+            padding: '28px 24px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+            border: '1px solid var(--borde, #e2e8f0)',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 18,
+          }}
+        >
+          <LogoOasis tamano={56} conTexto={true} />
+
+          <div
+            className="aviso peligro"
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              margin: 0,
+            }}
+          >
+            <div className="aviso-titulo" style={{ fontWeight: 700, marginBottom: 4 }}>
+              Sin conexión con la base de datos
+            </div>
+            <div className="aviso-cuerpo" style={{ fontSize: '0.9rem', lineHeight: 1.45 }}>
+              No se pudo conectar con la base de datos. Por favor revisa tu conexión a internet e intenta nuevamente.
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+            <button
+              type="button"
+              className="btn primario"
+              onClick={() => window.location.reload()}
+              style={{
+                width: '100%',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '12px 20px',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+              }}
+            >
+              Reintentar
+            </button>
+
+            {usuarioId && (
+              <button
+                type="button"
+                className="btn secundario chico"
+                onClick={() => {
+                  guardarSesion(null);
+                  setUsuarioId(null);
+                  setPaso('clave');
+                  setErrorUsuarios(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px 14px',
+                }}
+              >
+                Volver a ingresar con contraseña
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

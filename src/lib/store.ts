@@ -48,7 +48,7 @@ export const CONFIGURACION_INICIAL: Configuracion = {
   nombreIglesia: 'Centro de Alabanza Oasis',
 };
 
-type Escucha<T> = (datos: T[]) => void;
+type Escucha<T> = (datos: T[], error?: Error | unknown) => void;
 type Cancelar = () => void;
 
 export const MODO_DEMO = !HAY_FIREBASE;
@@ -442,17 +442,24 @@ export const store = {
     await deleteDoc(doc(db!, 'usuarios', id));
   },
 
-  observarUsuarios(cb: Escucha<Usuario>): Cancelar {
+  observarUsuarios(
+    cb: Escucha<Usuario>,
+    onError?: (error: Error | unknown) => void,
+  ): Cancelar {
     if (MODO_DEMO) return suscribirDemo<Usuario>('usuarios', cb);
     return onSnapshot(
       collection(db!, 'usuarios'),
       (snap) => {
-        cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Usuario));
+        cb(
+          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Usuario),
+          undefined,
+        );
       },
       (error) => {
         console.warn('Error al leer usuarios en Firestore:', error);
-        cb([]);
-      }
+        if (onError) onError(error);
+        cb([], error);
+      },
     );
   },
 

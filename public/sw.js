@@ -3,7 +3,7 @@
 // =====================================================================
 // REQUISITO CRÍTICO: La constante VERSION define el ciclo de vida de la caché.
 // Cada vez que se modifique este archivo o los recursos estáticos, sube el número.
-const VERSION = '1.0.2';
+const VERSION = '1.0.3';
 const CACHE_NAME = 'oasis-cache-v' + VERSION;
 
 // Recursos base indispensables para funcionamiento inicial y offline
@@ -73,9 +73,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. Documento HTML (Petición de navegación): Network-First
-  // Cuando el navegador pide la página en sí, intenta primero traerla de la red.
-  // Guarda la respuesta nueva en la caché para seguir sirviendo sin internet y usa la copia guardada solo si la red falla.
+  // 1. Documento HTML (Petición de navegación): Network-First con Timeout Seguro (2.8s)
+  // Intenta siempre obtener la versión más reciente de la red para reflejar cambios de inmediato.
+  // Si la red móvil tarda más de 2.8s, falla o da error de servidor (5xx), acude a la copia en caché (ignoreSearch: true).
   const esNavegacion =
     req.mode === 'navigate' ||
     req.destination === 'document' ||
@@ -83,23 +83,53 @@ self.addEventListener('fetch', (event) => {
 
   if (esNavegacion) {
     event.respondWith(
-      fetch(req)
-        .then((respuestaRed) => {
-          if (respuestaRed && respuestaRed.status === 200) {
-            const clon = respuestaRed.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(req, clon);
-              cache.put('/index.html', respuestaRed.clone());
+      new Promise((resolve) => {
+        let resuelto = false;
+
+        function responderCache() {
+          if (resuelto) return;
+          resuelto = true;
+          caches.match(req, { ignoreSearch: true }).then((res) => {
+            if (res) return resolve(res);
+            caches.match('/index.html', { ignoreSearch: true }).then((fallback) => {
+              resolve(fallback || caches.match('/'));
             });
-          }
-          return respuestaRed;
-        })
-        .catch(() => {
-          // Si la red falla, usar la copia guardada en la caché
-          return caches.match(req).then((res) => {
-            return res || caches.match('/index.html') || caches.match('/');
           });
-        }),
+        }
+
+        // Timeout seguro de 2.8 segundos para redes móviles lentas o inestables
+        const temporizador = setTimeout(() => {
+          responderCache();
+        }, 2800);
+
+        fetch(req)
+          .then((respuestaRed) => {
+            clearTimeout(temporizador);
+            if (respuestaRed && respuestaRed.status === 200) {
+              const clon = respuestaRed.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(req, clon);
+                cache.put('/index.html', respuestaRed.clone());
+              });
+              if (!resuelto) {
+                resuelto = true;
+                resolve(respuestaRed);
+              }
+            } else if (respuestaRed && respuestaRed.status >= 500) {
+              // Si el servidor da error 5xx en navegación, rescatar con la caché
+              responderCache();
+            } else {
+              if (!resuelto) {
+                resuelto = true;
+                resolve(respuestaRed);
+              }
+            }
+          })
+          .catch(() => {
+            clearTimeout(temporizador);
+            responderCache();
+          });
+      }),
     );
     return;
   }
@@ -107,7 +137,7 @@ self.addEventListener('fetch', (event) => {
   // 2. Recursos estáticos (imágenes, scripts, estilos, fuentes): Stale-While-Revalidate
   // Sirve de inmediato si está en caché y actualiza en segundo plano si hay red
   event.respondWith(
-    caches.match(req).then((respuestaCache) => {
+    caches.match(req, { ignoreSearch: true }).then((respuestaCache) => {
       const peticionRed = fetch(req)
         .then((respuestaRed) => {
           if (respuestaRed && respuestaRed.status === 200 && respuestaRed.type === 'basic') {

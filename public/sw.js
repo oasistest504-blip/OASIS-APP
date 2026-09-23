@@ -3,13 +3,14 @@
 // =====================================================================
 // REQUISITO CRÍTICO: La constante VERSION define el ciclo de vida de la caché.
 // Cada vez que se modifique este archivo o los recursos estáticos, sube el número.
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
 const CACHE_NAME = 'oasis-cache-v' + VERSION;
 
 // Recursos base indispensables para funcionamiento inicial y offline
 const RECURSOS_PRECACHE = [
   '/',
   '/index.html',
+  '/sin-conexion.html',
   '/manifest.json',
   '/manifest.webmanifest',
   '/logo.svg',
@@ -75,7 +76,7 @@ self.addEventListener('fetch', (event) => {
 
   // 1. Documento HTML (Petición de navegación): Network-First con Timeout Seguro (2.8s)
   // Intenta siempre obtener la versión más reciente de la red para reflejar cambios de inmediato.
-  // Si la red móvil tarda más de 2.8s, falla o da error de servidor (5xx), acude a la copia en caché (ignoreSearch: true).
+  // Si la petición de navegación falla por falta de red, responde con /sin-conexion.html en lugar de la copia guardada.
   const esNavegacion =
     req.mode === 'navigate' ||
     req.destination === 'document' ||
@@ -86,20 +87,22 @@ self.addEventListener('fetch', (event) => {
       new Promise((resolve) => {
         let resuelto = false;
 
-        function responderCache() {
+        function responderSinConexion() {
           if (resuelto) return;
           resuelto = true;
-          caches.match(req, { ignoreSearch: true }).then((res) => {
+          caches.match('/sin-conexion.html').then((res) => {
             if (res) return resolve(res);
-            caches.match('/index.html', { ignoreSearch: true }).then((fallback) => {
-              resolve(fallback || caches.match('/'));
-            });
+            fetch('/sin-conexion.html')
+              .then(resolve)
+              .catch(() => {
+                resolve(new Response('Sin conexión', { status: 503, headers: { 'Content-Type': 'text/plain' } }));
+              });
           });
         }
 
         // Timeout seguro de 2.8 segundos para redes móviles lentas o inestables
         const temporizador = setTimeout(() => {
-          responderCache();
+          responderSinConexion();
         }, 2800);
 
         fetch(req)
@@ -116,8 +119,7 @@ self.addEventListener('fetch', (event) => {
                 resolve(respuestaRed);
               }
             } else if (respuestaRed && respuestaRed.status >= 500) {
-              // Si el servidor da error 5xx en navegación, rescatar con la caché
-              responderCache();
+              responderSinConexion();
             } else {
               if (!resuelto) {
                 resuelto = true;
@@ -127,7 +129,7 @@ self.addEventListener('fetch', (event) => {
           })
           .catch(() => {
             clearTimeout(temporizador);
-            responderCache();
+            responderSinConexion();
           });
       }),
     );

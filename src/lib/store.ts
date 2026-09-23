@@ -43,8 +43,8 @@ import type {
 
 /** Las contraseñas con las que arranca la app. El Apóstol las cambia. */
 export const CONFIGURACION_INICIAL: Configuracion = {
-  claveLideres: 'oasis',
-  claveApostol: 'apostol',
+  claveLideres: '',
+  claveApostol: '',
   nombreIglesia: 'Centro de Alabanza Oasis',
 };
 

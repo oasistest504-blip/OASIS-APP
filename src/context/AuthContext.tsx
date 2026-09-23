@@ -50,6 +50,7 @@ interface ValorAuth {
   limpiarSesionExpirada: () => void;
   errorUsuarios?: boolean;
   errorConexion?: boolean;
+  configuracionLeida?: boolean;
   /** Inicializa la app por primera vez creando la configuración y los usuarios iniciales */
   inicializarApp: (
     claveApostol: string,
@@ -134,6 +135,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
   const [paso, setPaso] = useState<PasoEntrada>('clave');
   const [cargando, setCargando] = useState(true);
   const [usuariosLeidos, setUsuariosLeidos] = useState(false);
+  const [configuracionLeida, setConfiguracionLeida] = useState(false);
   const [sesionExpirada, setSesionExpirada] = useState(false);
   const [errorUsuarios, setErrorUsuarios] = useState(false);
 
@@ -164,7 +166,12 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
       setUsuariosLeidos(true);
     });
   }, []);
-  useEffect(() => store.observarConfiguracion(setConfiguracion), []);
+  useEffect(() => {
+    return store.observarConfiguracion((conf) => {
+      setConfiguracion(conf);
+      setConfiguracionLeida(true);
+    });
+  }, []);
 
   // Recuperar la sesión anterior (verificando que no haya expirado por inactividad de 1 hora).
   useEffect(() => {
@@ -359,6 +366,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     limpiarSesionExpirada: () => setSesionExpirada(false),
     errorUsuarios,
     errorConexion: errorUsuarios,
+    configuracionLeida,
 
     async inicializarApp(
       claveApostol: string,
@@ -409,6 +417,9 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
 
     async entrarComoApostol(clave: string): Promise<string> {
       setSesionExpirada(false);
+      if (!configuracionLeida) {
+        return 'No hay conexión con la base de datos. Revisa tu internet e intenta de nuevo.';
+      }
       const c = normalizar(clave);
       if (!c) return 'Escribe la contraseña de Apóstol.';
 
@@ -417,7 +428,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
         acertoApostol = await verificarClave(clave, configuracion.hashApostol);
       } else if (configuracion.claveApostol && c === normalizar(configuracion.claveApostol)) {
         acertoApostol = true;
-        await migrarClaveApostol(clave);
+        migrarClaveApostol(clave);
       }
 
       if (acertoApostol) {
@@ -449,7 +460,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
         acertoLider = await verificarClave(clave, configuracion.hashLideres);
       } else if (configuracion.claveLideres && c === normalizar(configuracion.claveLideres)) {
         acertoLider = true;
-        await migrarClaveLideres(clave);
+        migrarClaveLideres(clave);
       }
 
       if (acertoLider) {
@@ -462,6 +473,9 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
 
     async entrarComoLider(clave: string): Promise<string> {
       setSesionExpirada(false);
+      if (!configuracionLeida) {
+        return 'No hay conexión con la base de datos. Revisa tu internet e intenta de nuevo.';
+      }
       const c = normalizar(clave);
       if (!c) return 'Escribe la contraseña de Líderes.';
 
@@ -481,7 +495,7 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
         acertoLider = await verificarClave(clave, configuracion.hashLideres);
       } else if (configuracion.claveLideres && c === normalizar(configuracion.claveLideres)) {
         acertoLider = true;
-        await migrarClaveLideres(clave);
+        migrarClaveLideres(clave);
       }
 
       if (acertoLider) {
@@ -495,6 +509,9 @@ export function ProveedorAuth({ children }: { children: ReactNode }) {
     async entrarConClave(clave: string, rol?: 'apostol' | 'lider'): Promise<string> {
       if (rol === 'apostol') return await valor.entrarComoApostol(clave);
       if (rol === 'lider') return await valor.entrarComoLider(clave);
+      if (!configuracionLeida) {
+        return 'No hay conexión con la base de datos. Revisa tu internet e intenta de nuevo.';
+      }
 
       const c = normalizar(clave);
       if (!c) return 'Escribe la contraseña.';
